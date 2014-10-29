@@ -1,0 +1,4 @@
+*.pyc
+txriverlib/settings/*-local.conf
+*.egg-info*
+*.coverage
