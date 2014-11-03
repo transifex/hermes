@@ -5,7 +5,7 @@ import select
 
 from psycopg2._psycopg import InterfaceError
 
-from log import logger
+from hermes.log import logger
 
 
 class Component(Process):

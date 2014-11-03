@@ -1,5 +1,5 @@
 from Queue import Full
-from log import logger
+from hermes.log import logger
 from components import Component
 
 
