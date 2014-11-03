@@ -10,7 +10,7 @@ from watchdog.events import FileSystemEventHandler
 
 from components import Component
 from hermes.connectors import PostgresConnector
-from log import logger
+from hermes.log import logger
 
 
 class HermesClient(Process, FileSystemEventHandler):
@@ -62,19 +62,9 @@ class HermesClient(Process, FileSystemEventHandler):
         Starts itself, its components and its directory observer.
         """
         self._validate_components()
-        self.execute_role_based_procedure()
-        while self._should_run:
-            ready_pipes, _, _ = select(
-                (self._processor.error_queue._reader, ), (), ()
-            )
-            handled, msg = self._processor.error_queue.get()
-            if handled:
-                logger.warning(msg)
-            else:
-                logger.critical(msg)
-                self.execute_role_based_procedure()
         if not self._started:
             self.start_observer()
+        super(HermesClient, self).start()
 
     def run(self):
         """
@@ -107,7 +97,7 @@ class HermesClient(Process, FileSystemEventHandler):
         """
         Starts the Processor and Listener if the client is not running
         """
-        if self._processor.cleaned:
+        if not self._processor.started:
             try:
                 self._processor.exit_queue.get_nowait()
             except Empty:
@@ -115,7 +105,7 @@ class HermesClient(Process, FileSystemEventHandler):
 
             self._processor.start()
 
-        if self._listener.cleaned:
+        if not self._listener.started:
             try:
                 self._listener.exit_queue.get_nowait()
             except Empty:
@@ -127,10 +117,10 @@ class HermesClient(Process, FileSystemEventHandler):
         """
         Stops the Processor and Listener if the client is running
         """
-        if self._listener and not self._listener.cleaned:
+        if not self._listener.cleaned:
             self._listener.terminate()
 
-        if self._processor and not self._processor.cleaned:
+        if not self._processor.cleaned:
             self._processor.terminate()
 
     def start_observer(self):
