@@ -117,10 +117,10 @@ class HermesClient(Process, FileSystemEventHandler):
         """
         Stops the Processor and Listener if the client is running
         """
-        if not self._listener.cleaned:
+        if self._listener and not self._listener.cleaned:
             self._listener.terminate()
 
-        if not self._processor.cleaned:
+        if self._processor and not self._processor.cleaned:
             self._processor.terminate()
 
     def start_observer(self):
