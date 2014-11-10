@@ -13,7 +13,7 @@ from hermes.connectors import PostgresConnector
 from hermes.log import logger
 
 
-class HermesClient(Process, FileSystemEventHandler):
+class Client(Process, FileSystemEventHandler):
     """
     A client to hold references to the Processor and Listener components
     associated with a River.
@@ -28,7 +28,7 @@ class HermesClient(Process, FileSystemEventHandler):
     """
 
     def __init__(self, dsn, watch_path, failover_files):
-        super(HermesClient, self).__init__()
+        super(Client, self).__init__()
 
         self.directory_observer = Observer()
 
@@ -64,7 +64,7 @@ class HermesClient(Process, FileSystemEventHandler):
         self._validate_components()
         if not self._started:
             self.start_observer()
-        super(HermesClient, self).start()
+        super(Client, self).start()
 
     def run(self):
         """
@@ -91,7 +91,7 @@ class HermesClient(Process, FileSystemEventHandler):
         self.stop_components()
         self.stop_observer()
         if self.is_alive():
-            super(HermesClient, self).terminate()
+            super(Client, self).terminate()
 
     def start_components(self):
         """

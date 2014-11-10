@@ -6,7 +6,7 @@ from time import sleep
 import unittest
 
 from hermes.connectors import PostgresConnector
-from hermes.listeners import HermesNotificationListener
+from hermes.listeners import NotificationListener
 from hermes.strategies import ErrorStrategy
 
 
@@ -20,7 +20,7 @@ class ListenerTestCase(unittest.TestCase):
     def setUp(self):
         pg_connector = PostgresConnector(_POSTGRES_DSN)
         self.notif_queue = Queue(1)
-        self.listener = HermesNotificationListener(
+        self.listener = NotificationListener(
             pg_connector, _NOTIF_CHANNEL, self.notif_queue,
             ErrorStrategy(), Queue(), Queue(1), fire_on_start=False
         )

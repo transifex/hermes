@@ -3,7 +3,7 @@ from hermes.log import logger
 from components import Component
 
 
-class HermesNotificationListener(Component):
+class NotificationListener(Component):
     """
     A listener to detect event notifications from Postgres and pass onto to
     a processor.
@@ -27,7 +27,7 @@ class HermesNotificationListener(Component):
 
         :param exit_queue: the queue to listen for exit events on.
         """
-        super(HermesNotificationListener, self).__init__(
+        super(NotificationListener, self).__init__(
             pg_connector.pg_connection, error_strategy,
             exit_queue, error_queue, pg_connector
         )
@@ -50,7 +50,7 @@ class HermesNotificationListener(Component):
             except Full:
                 pass
 
-        super(HermesNotificationListener, self).run()
+        super(NotificationListener, self).run()
 
     def execute(self):
         self.pg_connector.pg_connection.poll()

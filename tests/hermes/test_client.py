@@ -5,7 +5,7 @@ import os
 
 from mock import MagicMock
 
-from hermes.client import HermesClient
+from hermes.client import Client
 from hermes.connectors import PostgresConnector
 
 
@@ -21,7 +21,7 @@ class ClientTestCase(unittest.TestCase):
         # Create the folder
         if not os.path.exists(_WATCH_PATH):
             os.makedirs(_WATCH_PATH)
-        self.client = HermesClient(_POSTGRES_DSN, _WATCH_PATH, _FAILOVER_FILES)
+        self.client = Client(_POSTGRES_DSN, _WATCH_PATH, _FAILOVER_FILES)
 
     def tearDown(self):
         self.client.terminate()
