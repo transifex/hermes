@@ -1,4 +1,4 @@
-![circleci_badge](https://circleci.com/gh/transifex/hermes.svg?style=shield&circle-token=:circle-token)
+[![Circle CI](https://circleci.com/gh/transifex/hermes.svg?style=badge&circle-token=:circle-token)](https://circleci.com/gh/transifex/hermes/tree/master)
 
 Hermes
 =======
