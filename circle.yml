@@ -10,3 +10,9 @@ dependencies:
 test:
   override:
     - nosetests --with-coverage --cover-package=hermes tests
+
+deployment:
+  rtfd:
+    branch: master
+    commands:
+      - curl -X POST http://readthedocs.org/build/hermes-lib
