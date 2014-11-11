@@ -11,22 +11,20 @@ from watchdog.events import FileSystemEventHandler
 from components import Component
 from hermes.connectors import PostgresConnector
 from hermes.log import logger
+from hermes.exceptions import InvalidConfigurationException
 
 
 class Client(Process, FileSystemEventHandler):
     """
-    A client to hold references to the Processor and Listener components
-    associated with a River.
+    Hermes client. Responsible for Listener and Processor components. Provides
+    functions to start/stop the Client and its Components. In addition, it is
+    also capable of receiving file-system events via the 'watchdog' library.
 
-    In addition, it is also capable of receiving file-system events via the
-    'watchdog' library.
-
-    General procedure:
+    General procedure
         * Starts both the Process and Listener components.
         * Listen and act upon exit/error notifications from components
         * Listen for file-system events and act accordingly.
     """
-
     def __init__(self, dsn, watch_path, failover_files):
         super(Client, self).__init__()
 
@@ -43,35 +41,61 @@ class Client(Process, FileSystemEventHandler):
         self.master_pg_conn = PostgresConnector(dsn)
 
     def add_processor(self, processor):
+        """
+        :arg processor: A :class:`~hermes.components.Component` object which
+        will receive notifications and run the
+        :func:`~hermes.components.Component.execute` method.
+        """
         assert isinstance(processor, Component), \
             "Processor must be of type Component"
         self._processor = processor
 
     def add_listener(self, listener):
+        """
+        :arg listener: A :class:`~hermes.components.Component` object which
+        will listen for notifications from Postgres and pass an event down a
+        queue.
+        """
         assert isinstance(listener, Component), \
             "Listener must of type Component"
         self._listener = listener
 
     def _validate_components(self):
-        assert self._processor, "A processor must be defined"
-        assert self._listener, "A listener must be defined"
-        assert self._processor.error_queue is self._listener.error_queue
+        """
+        Checks through a set of validation procedures to ensure the client is
+        configured properly.
+
+        :raises: :class:`~hermes.exceptions.InvalidConfigurationException`
+        """
+        if not self._processor:
+            raise InvalidConfigurationException("A processor must be defined")
+
+        if not self._listener:
+            raise InvalidConfigurationException("A listener must be defined")
+
+        if self._processor.error_queue is not self._listener.error_queue:
+            raise InvalidConfigurationException(
+                "A processor and listener's error queue must be the same"
+            )
 
     def start(self):
         """
-        Starts itself, its components and its directory observer.
+        Starts the Client, its Components and the directory observer
+        :raises: :class:`~hermes.exceptions.InvalidConfigurationException`
         """
         self._validate_components()
         if not self._started:
-            self.start_observer()
+            self._start_observer()
         super(Client, self).start()
 
     def run(self):
         """
-        Listens to errors reported by components and queries whether the
-        current server is a Master or Slave.
+        Performs a :func:`~select.select` on the components' error queue.
+        When a notification is detected, the client will log the message and
+        then calculate if the Postgres server is still a Master -  if not, the
+        components are shutdown.
         """
-        self.execute_role_based_procedure()
+        self._execute_role_based_procedure()
         while True:
             ready_pipes, _, _ = select(
                 (self._processor.error_queue._reader, ), (), ()
@@ -81,19 +105,18 @@ class Client(Process, FileSystemEventHandler):
                 logger.warning(msg)
             else:
                 logger.critical(msg)
-                self.execute_role_based_procedure()
+                self._execute_role_based_procedure()
 
     def terminate(self):
         """
-        Terminates each component, itself, and sets the 'running' flag to
-        false
+        Terminates each component, itself, and the directory observer.
         """
-        self.stop_components()
-        self.stop_observer()
+        self._stop_components()
+        self._stop_observer()
         if self.is_alive():
             super(Client, self).terminate()
 
-    def start_components(self):
+    def _start_components(self):
         """
         Starts the Processor and Listener if the client is not running
         """
@@ -113,7 +136,7 @@ class Client(Process, FileSystemEventHandler):
 
             self._listener.start()
 
-    def stop_components(self):
+    def _stop_components(self):
         """
         Stops the Processor and Listener if the client is running
         """
@@ -123,7 +146,7 @@ class Client(Process, FileSystemEventHandler):
         if self._processor and not self._processor.cleaned:
             self._processor.terminate()
 
-    def start_observer(self):
+    def _start_observer(self):
         """
         Schedules the observer using 'settings.WATCH_PATH'
         """
@@ -133,7 +156,7 @@ class Client(Process, FileSystemEventHandler):
         )
         self.directory_observer.start()
 
-    def stop_observer(self):
+    def _stop_observer(self):
         """
         Stops the observer if it is 'alive'
         """
@@ -143,16 +166,18 @@ class Client(Process, FileSystemEventHandler):
 
     def on_any_event(self, event):
         """
-        Listens to any event passed by 'watchdog' and checks the current
+        Listens to an event passed by 'watchdog' and checks the current
         master/slave status
 
-        :param event: an event object passed by 'watchdog'
+        :arg event: a :class:`~watchdog.events.FileSystemEvent`
+        object passed by 'watchdog' indicating an event change within the
+        specified directory.
         """
         file_name = event.src_path.split('/')[-1]
         if file_name in self._failover_files:
-            self.execute_role_based_procedure()
+            self._execute_role_based_procedure()
 
-    def execute_role_based_procedure(self):
+    def _execute_role_based_procedure(self):
         """
         Starts or stops components based on the role (Master/Slave) of the
         Postgres host.
@@ -168,13 +193,13 @@ class Client(Process, FileSystemEventHandler):
                     logger.warning(
                         'Server is a master, starting components'
                     )
-                    self.start_components()
+                    self._start_components()
                 else:
                     logger.warning('Server is a slave, stopping components')
-                    self.stop_components()
+                    self._stop_components()
                 break
             except OperationalError, e:
-                self.stop_components()
+                self._stop_components()
 
                 logger.warning(
                     'Cannot connect to the DB: {}'.format(e.pgerror)
