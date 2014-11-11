@@ -8,7 +8,7 @@ from psycopg2._psycopg import OperationalError
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
-from components import Component
+from hermes.components import Component
 from hermes.connectors import PostgresConnector
 from hermes.log import logger
 from hermes.exceptions import InvalidConfigurationException
