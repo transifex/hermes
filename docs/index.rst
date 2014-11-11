@@ -12,6 +12,7 @@ Contents:
    :maxdepth: 2
 
    Changelog
+   client
 
 
 Indices and tables
