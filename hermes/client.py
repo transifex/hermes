@@ -17,15 +17,65 @@ from hermes.exceptions import InvalidConfigurationException
 class Client(Process, FileSystemEventHandler):
     """
     Hermes client. Responsible for Listener and Processor components. Provides
-    functions to start/stop the Client and its Components. In addition, it is
+    functions to start/stop both itself and its components. In addition, it is
     also capable of receiving file-system events via the 'watchdog' library.
 
-    General procedure
-        * Starts both the Process and Listener components.
-        * Listen and act upon exit/error notifications from components
-        * Listen for file-system events and act accordingly.
+    General procedure::
+
+        1. Starts both the Process and Listener components.
+        2. Listen and act upon exit/error notifications from components
+        3. Listen for file-system events and act accordingly.
     """
-    def __init__(self, dsn, watch_path, failover_files):
+    def __init__(self, dsn, watch_path=None, failover_files=None):
+        """
+        To make the client listen for Postgres 'recovery.conf, recovery.done'
+        events::
+            from hermes.client import Client
+
+            dsn = {'database': 'example_db',
+                   'host': '127.0.0.1',
+                   'port': 5432,
+                   'user': 'example',
+                   'password': 'example'}
+
+            watch_path = '/var/lib/postgresql/9.4/main/'
+            failover_files = ['recovery.done', 'recovery.conf']
+
+            client = Client(dsn, watch_path, failover_files)
+
+            # Add processor and listener
+            ...
+
+            # Start the client
+            client.start()
+
+        Or, if you decide you don't want to use a file watcher, then you
+        can omit those parameters. However, the Client will still perform
+        master/slave checks if a problem is encountered::
+            from hermes.client import Client
+
+            dsn = {'database': 'example_db',
+                   'host': '127.0.0.1',
+                   'port': 5432,
+                   'user': 'example',
+                   'password': 'example'}
+
+            client = Client(dsn)
+
+            # Add processor and listener
+            ...
+
+            # Start the client
+            client.start()
+
+
+
+        :param dsn: a Postgres-compatible DSN dictionary
+        :param watch_path: the directory to monitor for filechanges. If None,
+            then file monitoring is disabled.
+        :param failover_files: a list of files which, when modified, will
+            cause the client to call :func:`~execute_role_based_procedure`
+        """
         super(Client, self).__init__()
 
         self.directory_observer = Observer()
@@ -42,9 +92,13 @@ class Client(Process, FileSystemEventHandler):
 
     def add_processor(self, processor):
         """
-        :arg processor: A :class:`~hermes.components.Component` object which
-        will receive notifications and run the
-        :func:`~hermes.components.Component.execute` method.
+        :param processor: A :class:`~hermes.components.Component` object which
+            will receive notifications and run the
+            :func:`~hermes.components.Component.execute` method.
+
+        :raises: :class:`~hermes.exceptions.InvalidConfigurationException` if
+            the provided processor is not a subclass of
+            :class:`~hermes.components.Component`
         """
         if not isinstance(processor, Component):
             raise InvalidConfigurationException(
@@ -54,9 +108,13 @@ class Client(Process, FileSystemEventHandler):
 
     def add_listener(self, listener):
         """
-        :arg listener: A :class:`~hermes.components.Component` object which
-        will listen for notifications from Postgres and pass an event down a
-        queue.
+        :param listener: A :class:`~hermes.components.Component` object which
+            will listen for notifications from Postgres and pass an event down
+            a queue.
+
+        :raises: :class:`~hermes.exceptions.InvalidConfigurationException` if
+            the provided listener is not a subclass of
+            :class:`~hermes.components.Component`
         """
         if not isinstance(listener, Component):
             raise InvalidConfigurationException(
@@ -85,6 +143,7 @@ class Client(Process, FileSystemEventHandler):
     def start(self):
         """
         Starts the Client, its Components and the directory observer
+
         :raises: :class:`~hermes.exceptions.InvalidConfigurationException`
         """
         self._validate_components()
@@ -99,7 +158,7 @@ class Client(Process, FileSystemEventHandler):
         then calculate if the Postgres server is still a Master -  if not, the
         components are shutdown.
         """
-        self._execute_role_based_procedure()
+        self.execute_role_based_procedure()
         while True:
             ready_pipes, _, _ = select(
                 (self._processor.error_queue._reader, ), (), ()
@@ -109,7 +168,7 @@ class Client(Process, FileSystemEventHandler):
                 logger.warning(msg)
             else:
                 logger.critical(msg)
-                self._execute_role_based_procedure()
+                self.execute_role_based_procedure()
 
     def terminate(self):
         """
@@ -154,19 +213,21 @@ class Client(Process, FileSystemEventHandler):
         """
         Schedules the observer using 'settings.WATCH_PATH'
         """
-        logger.info('Starting the directory observer')
-        self.directory_observer.schedule(
-            self, self._watch_path, recursive=False
-        )
-        self.directory_observer.start()
+        if self._watch_path:
+            logger.info('Starting the directory observer')
+            self.directory_observer.schedule(
+                self, self._watch_path, recursive=False
+            )
+            self.directory_observer.start()
 
     def _stop_observer(self):
         """
         Stops the observer if it is 'alive'
         """
-        logger.info('Stopping the directory observer')
-        if self.directory_observer.is_alive():
-            self.directory_observer.stop()
+        if self._watch_path:
+            logger.info('Stopping the directory observer')
+            if self.directory_observer.is_alive():
+                self.directory_observer.stop()
 
     def on_any_event(self, event):
         """
@@ -179,9 +240,9 @@ class Client(Process, FileSystemEventHandler):
         """
         file_name = event.src_path.split('/')[-1]
         if file_name in self._failover_files:
-            self._execute_role_based_procedure()
+            self.execute_role_based_procedure()
 
-    def _execute_role_based_procedure(self):
+    def execute_role_based_procedure(self):
         """
         Starts or stops components based on the role (Master/Slave) of the
         Postgres host.
