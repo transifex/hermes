@@ -15,4 +15,4 @@ deployment:
   rtfd:
     branch: master
     commands:
-      - curl -X POST http://readthedocs.org/build/hermes-lib
+      - curl -X POST http://readthedocs.org/build/hermes-pg-py
