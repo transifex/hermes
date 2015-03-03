@@ -12,13 +12,12 @@ class NotificationListener(Component):
     def __init__(self, pg_connector, notif_channel, notif_queue,
                  error_strategy, error_queue, exit_queue, fire_on_start=True):
         """
-
         :param pg_connector: a PostgresConnector object.
         :param notif_channel: the string representing the notification channel
-                              to listen to updates on.
+            to listen to updates on.
         :param notif_queue: the notification queue to pass events to
         :param error_strategy: the error strategy that this listener should
-                               follow.
+            follow.
         :param error_queue: the error queue to inform the client on.
         :param exit_queue: the queue to listen for exit events on.
         """
