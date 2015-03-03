@@ -46,8 +46,10 @@ class Client(Process, FileSystemEventHandler):
         will receive notifications and run the
         :func:`~hermes.components.Component.execute` method.
         """
-        assert isinstance(processor, Component), \
-            "Processor must be of type Component"
+        if not isinstance(processor, Component):
+            raise InvalidConfigurationException(
+                "Processor must of type Component"
+            )
         self._processor = processor
 
     def add_listener(self, listener):
@@ -56,8 +58,10 @@ class Client(Process, FileSystemEventHandler):
         will listen for notifications from Postgres and pass an event down a
         queue.
         """
-        assert isinstance(listener, Component), \
-            "Listener must of type Component"
+        if not isinstance(listener, Component):
+            raise InvalidConfigurationException(
+                "Listener must of type Component"
+            )
         self._listener = listener
 
     def _validate_components(self):
