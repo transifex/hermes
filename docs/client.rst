@@ -1,9 +1,11 @@
 .. _client:
 
-Hermes Client
-=============
+Client
+======
 
 .. py:module:: hermes.client
 
 .. autoclass:: Client
    :members:
+   :show-inheritance:
+   :inherited-members:
