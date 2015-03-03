@@ -28,7 +28,9 @@ sys.path.insert(0, os.path.abspath('..'))
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ['sphinx.ext.autodoc', ]
+extensions = ['sphinx.ext.autodoc',
+              'sphinx.ext.doctest',
+              'sphinx.ext.intersphinx']
 
 autoclass_content = "both"
 
@@ -47,6 +49,10 @@ master_doc = 'index'
 # General information about the project.
 project = u'hermes'
 copyright = u'2014, Transifex'
+
+intersphinx_mapping = {
+    'psycopg2': ('http://initd.org/psycopg/docs/', None)
+}
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
