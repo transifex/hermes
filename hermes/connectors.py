@@ -14,13 +14,13 @@ class PostgresConnector(object):
     def __init__(self, dsn):
         """
         :param dsn: a DSN dictionary of the Postgres server to connect to.
-        e.g. {
-            'database': 'example_db',
-            'host': '127.0.0.1',
-            'port': 5432,
-            'user': 'example',
-            'password': 'example'
-        }
+                    e.g. {
+                        'database': 'example_db',
+                        'host': '127.0.0.1',
+                        'port': 5432,
+                        'user': 'example',
+                        'password': 'example'
+                    }
         """
         self._dsn = dsn
         self._pg_conn = None
