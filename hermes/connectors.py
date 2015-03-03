@@ -57,7 +57,7 @@ class PostgresConnector(object):
     def disconnect(self):
         """
         Disconnects from the Postgres instance unless it is already
-        disonnected.
+        disconnected.
         """
         if self._pg_conn and not self._pg_conn.closed:
             self._pg_conn.close()
