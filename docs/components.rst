@@ -8,4 +8,3 @@ Components
 .. autoclass:: Component
    :members:
    :show-inheritance:
-   :inherited-members:

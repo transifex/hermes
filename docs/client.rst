@@ -8,4 +8,3 @@ Client
 .. autoclass:: Client
    :members:
    :show-inheritance:
-   :inherited-members:
