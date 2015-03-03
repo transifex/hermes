@@ -247,8 +247,10 @@ class Client(Process, FileSystemEventHandler):
         Starts or stops components based on the role (Master/Slave) of the
         Postgres host.
 
-        Implements a binary exponential backoff up to 32 seconds if it
-        encounters a FATAL connection error.
+        Implements a `binary exponential backoff
+        <http://en.wikipedia.org/wiki/Exponential_backoff
+        #Binary_exponential_backoff_.2F_truncated_exponential_backoff>`_
+        up to 32 seconds if it encounters a FATAL connection error.
         """
         backoff = 0
         while True:
