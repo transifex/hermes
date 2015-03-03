@@ -234,7 +234,7 @@ class Client(Process, FileSystemEventHandler):
         Listens to an event passed by 'watchdog' and checks the current
         master/slave status
 
-        :arg event: a :class:`~watchdog.events.FileSystemEvent`
+        :param event: a :class:`~watchdog.events.FileSystemEvent`
         object passed by 'watchdog' indicating an event change within the
         specified directory.
         """
