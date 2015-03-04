@@ -7,3 +7,4 @@ Exceptions
 
 .. autoexception:: InvalidConfigurationException
    :members:
+   :show-inheritance:

@@ -52,7 +52,8 @@ copyright = u'2014, Transifex'
 
 intersphinx_mapping = {
     'psycopg2': ('http://initd.org/psycopg/docs/', None),
-    'watchdog': ('http://pythonhosted.org/watchdog/', None)
+    'watchdog': ('http://pythonhosted.org/watchdog/', None),
+    'python': ('https://docs.python.org/2.7/', None),
 }
 
 # The version info for the project you're documenting, acts as replacement for

@@ -7,3 +7,4 @@ Listeners
 
 .. autoclass:: NotificationListener
    :members:
+   :show-inheritance:
