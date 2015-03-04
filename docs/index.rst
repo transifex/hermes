@@ -1,4 +1,4 @@
-Python hermes-pg Documentation
+Python hermes-py Documentation
 ==============================
 Hermes is a Postgres-talking, event-driven, failure-handling Python library.
 Its main purpose is to enable the easy implementation of resilient Python
