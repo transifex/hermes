@@ -37,10 +37,10 @@ class ClientTestCase(unittest.TestCase):
         old_func = PostgresConnector.is_server_master
         PostgresConnector.is_server_master = MagicMock(return_value=True)
 
-        self.client.start_components = MagicMock(return_value=None)
+        self.client._start_components = MagicMock(return_value=None)
 
         # Start the client and allow to settle
-        self.client.start_observer()
+        self.client._start_observer()
         sleep(3)
 
         # Create a file and detect if the RiverClient has been informed
@@ -51,7 +51,7 @@ class ClientTestCase(unittest.TestCase):
         # Give the event time to emit
         sleep(3)
 
-        self.assertTrue(self.client.start_components.called)
+        self.assertTrue(self.client._start_components.called)
 
         PostgresConnector.is_server_master = old_func
 
