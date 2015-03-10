@@ -69,7 +69,7 @@ class PostgresConnector(object):
             subclass as defined by the cursor_factory passed to the
             constructor
         """
-        if self._pg_cursor is None or self._pg_cursor.closed:
+        if not self._pg_cursor or self._pg_cursor.closed:
             self._pg_cursor = self.pg_connection.cursor()
         return self._pg_cursor
 
@@ -78,8 +78,19 @@ class PostgresConnector(object):
         Disconnects from the Postgres instance unless it is already
         disconnected.
         """
-        if self._pg_conn and not self._pg_conn.closed:
+        try:
+            self._pg_cursor.close()
+        except AttributeError:
+            pass
+        finally:
+            self._pg_cursor = None
+
+        try:
             self._pg_conn.close()
+        except AttributeError:
+            pass
+        finally:
+            self._pg_conn = None
 
     def is_server_master(self):
         """

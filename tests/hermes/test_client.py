@@ -22,9 +22,11 @@ class ClientTestCase(unittest.TestCase):
         if not os.path.exists(_WATCH_PATH):
             os.makedirs(_WATCH_PATH)
         self.client = Client(_POSTGRES_DSN, _WATCH_PATH, _FAILOVER_FILES)
+        self.client.log = MagicMock()
 
     def tearDown(self):
-        self.client.terminate()
+        if self.client.is_alive():
+            self.client.terminate()
         # Remove the folder
         if not os.path.exists(_WATCH_PATH):
             os.removedirs(_WATCH_PATH)

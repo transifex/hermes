@@ -40,7 +40,7 @@ requirements, dependency_links = get_requirements(
 
 setup(
     name="hermes",
-    version='0.1',
+    version='0.2',
     description="Event-driven Postgres client library",
     author="Transifex",
     author_email="admin@transifex.com",
