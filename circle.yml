@@ -9,11 +9,9 @@ dependencies:
 test:
   override:
     - python setup.py test
+    - coveralls
 
 deployment:
-  coveralls:
-    commands:
-      - coveralls
   rtfd:
     branch: master
     commands:
