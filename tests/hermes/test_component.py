@@ -9,7 +9,7 @@ from psycopg2._psycopg import InterfaceError
 
 from hermes.components import Component
 from hermes.connectors import PostgresConnector
-from hermes.strategies import ErrorStrategy, CommonErrorStrategy
+from hermes.strategies import AbstractErrorStrategy, CommonErrorStrategy
 from tests import util
 from tests.util import rand_string
 
@@ -117,7 +117,7 @@ class ComponentTestCase(unittest.TestCase):
     def test_error_received_on_exception_in_execute(self):
         mock_execption_return = (False, util.rand_string(10))
 
-        error_strat = ErrorStrategy()
+        error_strat = AbstractErrorStrategy()
         error_strat.handle_exception = MagicMock(
             return_value=mock_execption_return
         )

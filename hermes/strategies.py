@@ -4,7 +4,7 @@ from psycopg2 import InterfaceError, DatabaseError, OperationalError
 CONTINUE, BACKOFF, TERMINATE = 1, 2, 3
 
 
-class ErrorStrategy(object):
+class AbstractErrorStrategy(object):
     """
     Abstract strategy for handling errors returned from components
     """
@@ -20,7 +20,7 @@ class ErrorStrategy(object):
                                   "'handle_exception' method")
 
 
-class CommonErrorStrategy(ErrorStrategy):
+class CommonErrorStrategy(AbstractErrorStrategy):
     """
     A common error strategy to deal with Postgres errors
     """
