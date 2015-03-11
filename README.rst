@@ -27,8 +27,8 @@ Status
 .. image:: https://circleci.com/gh/transifex/hermes.svg?style=shield
     :target: https://circleci.com/gh/transifex/hermes
 
-.. image:: https://coveralls.io/repos/transifex/hermes/badge.svg?branch=be_graceful
-    :target: https://coveralls.io/r/transifex/hermes?branch=be_graceful
+.. image:: https://coveralls.io/repos/transifex/hermes/badge.svg
+    :target: https://coveralls.io/r/transifex/hermes
 
 .. image:: https://readthedocs.org/projects/hermes-py/badge/?version=latest
     :target: https://readthedocs.org/projects/hermes-py/?badge=latest
