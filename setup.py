@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
-import re
-import os
+from os.path import join
 
 from setuptools import setup, find_packages
 
@@ -18,10 +17,14 @@ tests_require = [
     'nosexcover'
 ]
 
+with open(join(__file__), 'README') as _file:
+    long_desc = _file.read().strip()
+
 setup(
     name="hermes",
     version='0.0.2',
     description="Event-driven Postgres client library",
+    long_description=long_desc,
     author="Liam Costello",
     author_email="liam@transifex.com",
     url="https://github.com/transifex/hermes",
@@ -32,5 +35,18 @@ setup(
     packages=find_packages(
         where='.',
         exclude=('test_hermes*', )
-    )
+    ),
+    classifiers=[
+        "Development Status :: 4 - Beta",
+        "License :: OSI Approved :: Apache Software License",
+        "Intended Audience :: Developers",
+        "Operating System :: Unix",
+        "Operating System :: POSIX",
+        "Programming Language :: Python",
+        "Programming Language :: Python :: 2",
+        "Programming Language :: Python :: 2.6",
+        "Programming Language :: Python :: 2.7",
+        "Programming Language :: Python :: Implementation :: CPython",
+        "Topic :: Software Development :: Libraries :: Application Frameworks"
+    ]
 )
