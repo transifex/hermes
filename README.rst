@@ -19,7 +19,7 @@ You can run tests by doing the following::
 
 Status
 ------
-.. image:: https://circleci.com/gh/transifex/hermes.svg?style=badge
+.. image:: https://circleci.com/gh/transifex/hermes.svg?style=shield
     :target: https://circleci.com/gh/transifex/hermes
 
 .. image:: https://coveralls.io/repos/transifex/hermes/badge.svg?branch=be_graceful
