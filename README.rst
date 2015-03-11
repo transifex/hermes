@@ -19,6 +19,8 @@ You can run tests by doing the following::
 
 Status
 ------
-[![Circle CI](https://circleci.com/gh/transifex/hermes.svg?style=badge&circle-token=:circle-token)](https://circleci.com/gh/transifex/hermes/tree/master)
+.. image:: https://circleci.com/gh/transifex/hermes.svg?style=badge
+    :target: https://circleci.com/gh/transifex/hermes
 
-[![Coverage Status](https://coveralls.io/repos/transifex/hermes/badge.svg)](https://coveralls.io/r/transifex/hermes)
+.. image:: https://coveralls.io/repos/transifex/hermes/badge.svg?branch=be_graceful
+    :target: https://coveralls.io/r/transifex/hermes?branch=be_graceful
