@@ -74,7 +74,7 @@ class Component(LoggerMixin, Process):
         Can be safely overridden by callers. The return value will be
         passed to :func:`~execute`.
         """
-        pass
+        pass  # pragma: no cover
 
     def execute(self, pre_exec_value):
         """
@@ -93,7 +93,7 @@ class Component(LoggerMixin, Process):
 
         :param exec_value: The value returned by :func:`~execute`
         """
-        pass
+        pass  # pragma: no cover
 
     def set_up(self):
         """
@@ -110,7 +110,7 @@ class Component(LoggerMixin, Process):
 
         Can be used to tear down any resources.
         """
-        pass
+        pass  # pragma: no cover
 
     def start(self):
         """
