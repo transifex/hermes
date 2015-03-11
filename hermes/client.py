@@ -7,7 +7,7 @@ from signal import signal, SIGCHLD, SIGINT
 from time import sleep
 import os
 
-from psycopg2._psycopg import OperationalError
+from psycopg2 import OperationalError
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
