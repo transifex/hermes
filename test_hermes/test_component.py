@@ -209,3 +209,9 @@ class SignalHandlerTestCase(TestCase):
 
         os.kill(current_pid, SIGINT)
         self.assertEqual(component._handle_stop_signal.call_count, 1)
+
+    def test_should_run_is_set_to_false_on_stop_signal(self):
+        component = Component(MagicMock(), MagicMock(), MagicMock())
+        component._should_run = True
+        component._handle_stop_signal(None, None)
+        self.assertFalse(component._should_run)
