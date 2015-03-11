@@ -170,6 +170,11 @@ class ComponentTestCase(TestCase):
         return_value = self.component.ident
         self.assertIsNone(return_value)
 
+    def test_join_returns_on_no_process(self):
+        self.assertRaises(AttributeError, lambda: self.component._popen)
+        return_value = self.component.join()
+        self.assertIsNone(return_value)
+
     def test_execute_gets_notification_and_calls_execute_funcs(self):
         self.component._should_run = OnceTrueBool(1)
         self.component._backoff_time = randint(1, 10000)
