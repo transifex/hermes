@@ -1,4 +1,5 @@
 from multiprocessing.queues import Queue
+from random import randint
 from unittest import TestCase
 from time import sleep
 import select
@@ -20,6 +21,18 @@ _POSTGRES_DSN = {
 }
 
 
+class OnceTrueBool(int):
+    def __init__(self, x):
+        super(OnceTrueBool, self).__init__(x)
+        self.called = False
+
+    def __nonzero__(self):
+        if not self.called:
+            self.called = True
+            return True
+        return False
+
+
 class ComponentTestCase(TestCase):
     def setUp(self):
         self.notif_queue = Queue(1)
@@ -28,6 +41,7 @@ class ComponentTestCase(TestCase):
                                    CommonErrorStrategy(),
                                    self.error_queue,
                                    PostgresConnector(_POSTGRES_DSN))
+        self.component.log = MagicMock()
 
     def tearDown(self):
         # Component can have an attribute error on _parent_pid due to the fact
@@ -146,14 +160,37 @@ class ComponentTestCase(TestCase):
         sleep(1)
         self.assertTrue(self.component.is_alive())
 
+    def test_isalive_is_false_on_attr_error(self):
+        self.assertRaises(AttributeError, lambda: self.component._popen)
+        return_value = self.component.is_alive()
+        self.assertFalse(return_value)
+
+    def test_ident_is_none_on_attr_error(self):
+        self.assertRaises(AttributeError, lambda: self.component._popen)
+        return_value = self.component.ident
+        self.assertIsNone(return_value)
+
+    def test_execute_gets_notification_and_calls_execute_funcs(self):
+        self.component._should_run = OnceTrueBool(1)
+        self.component._backoff_time = randint(1, 10000)
+
+        self.component.execute = MagicMock()
+        self.component.post_execute = MagicMock()
+        self.component.pre_execute = MagicMock()
+
+        # Put the notification so it will immediately return from select
+        self.notif_queue.put(True)
+
+        self.component._execute()
+
+        self.assertEqual(self.component.post_execute.call_count, 1)
+        self.assertEqual(self.component.execute.call_count, 1)
+        self.assertEqual(self.component.pre_execute.call_count, 1)
+
+        self.assertEqual(self.component._backoff_time, 0)
+
 
 class SignalHandlerTestCase(TestCase):
-    def setUp(self):
-        pass
-
-    def tearDown(self):
-        pass
-
     def test_setup_signal_handlers(self):
         component = Component(MagicMock(), MagicMock(), MagicMock())
         component._handle_stop_signal = MagicMock()
