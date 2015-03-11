@@ -5,32 +5,20 @@ Logging setup for hermes
 """
 
 import logging
+from logging import StreamHandler, Formatter, DEBUG
 
-from logging.config import dictConfig
+
+def get_logger(process):
+    logger = logging.getLogger(process.name)
+    stream_handler = StreamHandler()
+    stream_handler.setFormatter(
+        Formatter('[%(asctime)s %(name)s %(levelname)s] %(message)s')
+    )
+    logger.setLevel(DEBUG)
+    logger.addHandler(stream_handler)
+    return logger
 
 
-LOGGING = {
-    'version': 1,
-    'formatters': {
-        'hermes_stream': {
-            'format': '[%(asctime)s %(name)s %(levelname)s] %(message)s',
-        },
-    },
-    'handlers': {
-        'log_to_stream': {
-            'level': 'DEBUG',
-            'class': 'logging.StreamHandler',
-            'formatter': 'hermes_stream',
-        },
-    },
-    'loggers': {
-        'hermes': {
-            'handlers': ['log_to_stream'],
-            'level': 'DEBUG',
-            'propagate': False,
-        }
-    }
-}
-
-dictConfig(LOGGING)
-logger = logging.getLogger('hermes')
+class LoggerMixin(object):
+    def run(self, *args, **kwargs):
+        self.log = get_logger(self)

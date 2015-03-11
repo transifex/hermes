@@ -5,9 +5,11 @@ from multiprocessing.queues import Queue
 from time import sleep
 import unittest
 
+from mock import MagicMock
+
 from hermes.connectors import PostgresConnector
-from hermes.listeners import NotificationListener
-from hermes.strategies import ErrorStrategy
+from hermes.listeners import PostgresNotificationListener
+from hermes.strategies import CommonErrorStrategy
 
 
 _POSTGRES_DSN = {
@@ -20,23 +22,31 @@ class ListenerTestCase(unittest.TestCase):
     def setUp(self):
         pg_connector = PostgresConnector(_POSTGRES_DSN)
         self.notif_queue = Queue(1)
-        self.listener = NotificationListener(
+        self.listener = PostgresNotificationListener(
             pg_connector, _NOTIF_CHANNEL, self.notif_queue,
-            ErrorStrategy(), Queue(), Queue(1), fire_on_start=False
+            CommonErrorStrategy(), Queue(), fire_on_start=False
         )
+        self.listener.log = MagicMock()
 
     def tearDown(self):
         self.listener.terminate()
+        self.listener.join()
 
     def test_notification_listener(self):
         self.assertTrue(self.notif_queue.empty())
         # Start the listener process
         self.listener.start()
-        sleep(3)
+        sleep(1)
 
         send_notification()
 
-        notif = self.notif_queue.get(timeout=5)
+        try:
+            error = self.listener.error_queue.get(timeout=1)
+            self.assertTrue(False, error)
+        except Empty:
+            pass
+
+        notif = self.notif_queue.get(timeout=2)
         self.assertIsNotNone(notif)
 
     def test_notification_stops_listening_on_terminate(self):
@@ -58,8 +68,9 @@ class ListenerTestCase(unittest.TestCase):
     def test_notification_listener_terminates(self):
         self.assertTrue(self.notif_queue.empty())
         self.listener.start()
-        sleep(3)
+        sleep(1)
         self.listener.terminate()
+        sleep(1)
         self.assertFalse(self.listener.is_alive())
 
 

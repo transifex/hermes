@@ -1,12 +1,18 @@
 machine:
   environment:
-    TX_ALL_TESTS: 1
+    ALL_TESTS: 1
 
 dependencies:
   override:
-    - pip install coverage
-    - pip install -r requirements/devel.txt
+    - pip install coveralls
 
 test:
   override:
-    - nosetests --with-coverage --cover-package=hermes tests
+    - python setup.py test
+    - coveralls
+
+deployment:
+  rtfd:
+    branch: master
+    commands:
+      - curl -X POST http://readthedocs.org/build/hermes-py

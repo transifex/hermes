@@ -1,119 +1,225 @@
-from Queue import Full, Empty
-from errno import EINTR
 from multiprocessing import Process
 import select
+from signal import signal, SIGTERM, SIGINT
+from time import sleep
 
-from psycopg2._psycopg import InterfaceError
+from hermes.log import LoggerMixin
+from hermes import strategies
 
-from hermes.log import logger
+
+_LOG_PID = 'Started with PID:{}'
+_HANDLED_EXCEPTION = 'Handled an exception'
+_TERMINATED_ON_EXCEPTION = 'Terminated due to exception'
+_UNHANDLED_EXCEPTION = 'An unhandled exception has been raised'
+_BACKOFF_EXCEPTION = 'Backing off {} seconds due to an exception'
 
 
-class Component(Process):
+class Component(LoggerMixin, Process):
+    """
+    A class which can be used to create both listener and processor
+    objects. Callers must implement :func:`~execute` and can others if
+    they so choose.
+
+    The structure of calls::
+
+        +-----------------+
+        |      set_up     | <--------------+
+        +-----------------+                |
+                 +                         |
+                 |                         |
+                 |                         |   ERROR
+                 V                         |
+      +-----------------------+            |
+      |      pre_execute      |            |
+      |        execute        | +----------+
+      |      post_execute     |
+      +-----------------------+
+                 +
+                 |
+                 |
+                 V
+      +-----------------------+
+      |      tear_down        |
+      +-----------------------+
+    """
+
     def __init__(self, notification_pipe, error_strategy,
-                 exit_queue, error_queue, pg_connector):
-        self.error_strategy = error_strategy
-        self.exit_queue = exit_queue
-        self.error_queue = error_queue
-        self.pg_connector = pg_connector
-        self.notification_pipe = notification_pipe
-        self.cleaned = False
-        self.started = False
+                 error_queue, backoff_limit=16):
+        """
+        The Component class adds a foundation for you to build a
+        fully-fledged processor or listener. You can add/modify as much
+        as you like - sensitive methods have been identified.
 
-    def execute(self):
+        :param notification_pipe: The :class:`~multiprocessing.Pipe`-like
+            object to perform :func:`~select.select` on.
+        :param error_strategy: An object of type
+            :class:`~hermes.strategies.AbstractErrorStrategy` to handle
+            exceptions.
+        :param error_queue: A :class:`~multiprocessing.Queue`-like object
+            to inform the :class:`~hermes.client.Client` through.
+        :param backoff_limit: The maximum number of seconds to backoff a
+            Component until it resets.
+        """
+        self.error_strategy = error_strategy
+        self.error_queue = error_queue
+        self.notification_pipe = notification_pipe
+
+        self._should_run = False
+        self._backoff_limit = backoff_limit
+
+        self.__backoff_time__ = 0
+
+    def pre_execute(self):
+        """
+        Can be safely overridden by callers. The return value will be
+        passed to :func:`~execute`.
+        """
+        pass
+
+    def execute(self, pre_exec_value):
+        """
+        Must be overridden by callers. The return value will be
+        passed to :func:`~post_execute`
+
+        :param pre_exec_value: The value returned by :func:`~pre_execute`
+        """
         raise NotImplementedError(
             "Subclasses MUST override the 'execute' method"
         )
 
-    def execution_done(self):
-        raise NotImplementedError(
-            "Subclasses MUST override the 'execution_done' method"
-        )
+    def post_execute(self, exec_value):
+        """
+        Can be safely overridden by callers.
+
+        :param exec_value: The value returned by :func:`~execute`
+        """
+        pass
+
+    def set_up(self):
+        """
+        Called before execute methods and only once per iteration.
+
+        Overridden methods should call super.
+        """
+        signal(SIGTERM, self._handle_stop_signal)
+        signal(SIGINT, self._handle_stop_signal)
+
+    def tear_down(self):
+        """
+        Called after execute methods and only once per iteration.
+
+        Can be used to tear down any resources.
+        """
+        pass
 
     def start(self):
-        if not self.started:
-            self.__empty_exit_queue__()
-            super(Component, self).__init__()
-            self.cleaned = False
-            self.started = True
-            super(Component, self).start()
-
-    def __empty_exit_queue__(self):
-        try:
-            while True:
-                self.exit_queue.get_nowait()
-        except Empty:
-            pass
+        """
+        Initialises the process, sets it to daemonic and starts.
+        """
+        super(Component, self).__init__()
+        self.daemon = True
+        super(Component, self).start()
 
     def run(self):
         """
+        The main Component loop.
 
+        Callers should take great care when overriding.
         """
-        while True:
+        super(Component, self).run()
+        self.log.debug(_LOG_PID.format(self.pid))
+        self._should_run = True
+        while self._should_run:
             try:
-                ready_pipes, _, _ = select.select(
-                    (self.notification_pipe, self.exit_queue._reader), [], []
-                )
-            except select.error, ex:
-                # If we get an EINTR(4) exception then we should break out
-                # because the client is shutting down and interrupts will be
-                # thrown around like it's some sort of interrupt party and
-                # everyone is invited.
-                if ex[0] == EINTR:
-                    break
-                else:
-                    self.cleanup()
-                    raise
-            except InterfaceError:
-                # The Database is shutting or has shut down. We can safely
-                # break out of this component and we'll be called later on.
+                self.set_up()
+                self._execute()
+            except select.error:
                 break
-
-            if self.exit_queue._reader in ready_pipes:
-                logger.debug('{} shutting down'.format(
-                    self.__class__.__name__
-                ))
-                break
-
-            try:
-                if self.notification_pipe in ready_pipes:
-                    logger.debug(
-                        '{} received notification, running "execute"'.format(
-                            self.__class__.__name__
-                        )
-                    )
-                    self.execute()
-                    self.execution_done()
             except Exception, e:
-                handled, message = self.error_strategy.handle_exception(e)
-                self.error_queue.put((handled, message))
-        self.cleanup()
+                expected, action = self.error_strategy.handle_exception(e)
+                if action == strategies.CONTINUE:
+                    self.log.warning(_HANDLED_EXCEPTION, exc_info=True)
+                    continue
+                elif action == strategies.TERMINATE:
+                    self.log.warning(_TERMINATED_ON_EXCEPTION, exc_info=True)
+                elif action == strategies.BACKOFF:
+                    self._backoff()
+                    continue
+                else:
+                    self.log.critical(_UNHANDLED_EXCEPTION, exc_info=True)
 
-    def join(self, timeout=None):
-        """
-        Joins the component if 'self.started' is set to True. Calls
-        'self.cleanup' regardless of outcome.
-        """
-        if self.started:
-            super(Component, self).join(timeout=timeout)
-        self.cleanup()
+                self.error_queue.put((expected, action))
+                self._should_run = False
+            finally:
+                self.tear_down()
 
-    def cleanup(self):
+    def _execute(self):
         """
-        Disconnects the attached connector and sets 'self.cleaned' to True.
+        Loops through select -> post_exec(execute(pre_execute)) until
+        terminate is called or an exception is raised.
         """
-        if self.cleaned:
-            return
-        self.pg_connector.disconnect()
-        self.cleaned = True
-        self.started = False
+        while self._should_run:
+            ready_pipes, _, _ = select.select(
+                (self.notification_pipe, ), (), ()
+            )
 
-    def terminate(self):
+            if self.notification_pipe in ready_pipes:
+                self.log.debug('Received notification, running execute')
+                self.post_execute(self.execute(self.pre_execute()))
+
+        self._backoff_time = 0
+
+    def is_alive(self):
         """
-        Terminates the component by putting an entry on the 'exit_queue' and
-        joining the current thread.
+        :return: :func:`~Process.is_alive` unless the Component has
+            not been started and returns False.
         """
         try:
-            self.exit_queue.put_nowait(True)
-        except Full:
-            pass
-        self.join()
+            return super(Component, self).is_alive()
+        except AttributeError:
+            return False
+
+    def join(self, **kwargs):
+        """
+        :return: :func:`~Process.join` unless the Component has not
+            been started and returns immediately.
+        """
+        try:
+            return super(Component, self).join(**kwargs)
+        except AttributeError:
+            return
+
+    @property
+    def ident(self):
+        """
+        :return: :func:`~multiprocessing.Process.ident` unless the
+            Component has not been started and returns None.
+        """
+        try:
+            return super(Component, self).ident
+        except AttributeError:
+            return None
+
+    def _backoff(self):
+        """
+        Backs off up to the provided backoff_limit.
+        """
+        msg = _BACKOFF_EXCEPTION.format(self.__backoff_time__)
+        self.log.warning(msg, exc_info=True)
+
+        if self.__backoff_time__:
+            self.__backoff_time__ <<= 1
+            if self.__backoff_time__ > self._backoff_limit:
+                self.__backoff_time__ = 0
+        else:
+            self.__backoff_time__ = 1
+
+        sleep(self.__backoff_time__)
+        self.log.warning('Retrying...')
+
+    def _handle_stop_signal(self, sig, frame):
+        """
+        Terminates the Component by setting the _should_run
+        flag to False.
+        """
+        self._should_run = False
