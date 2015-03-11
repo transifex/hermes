@@ -11,6 +11,10 @@ test:
     - python setup.py test
 
 deployment:
+  coveralls:
+    commands:
+     - coveralls
+
   rtfd:
     branch: master
     commands:
