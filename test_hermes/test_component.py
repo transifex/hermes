@@ -1,7 +1,10 @@
 from multiprocessing.queues import Queue
-import unittest
+from unittest import TestCase
 from time import sleep
 import select
+import os
+import multiprocessing
+from signal import SIGTERM, SIGINT
 
 from mock import MagicMock, patch
 from psycopg2._psycopg import InterfaceError
@@ -9,7 +12,6 @@ from psycopg2._psycopg import InterfaceError
 from hermes.components import Component
 from hermes.connectors import PostgresConnector
 from hermes.strategies import AbstractErrorStrategy, CommonErrorStrategy
-
 import util
 
 
@@ -18,7 +20,7 @@ _POSTGRES_DSN = {
 }
 
 
-class ComponentTestCase(unittest.TestCase):
+class ComponentTestCase(TestCase):
     def setUp(self):
         self.notif_queue = Queue(1)
         self.error_queue = Queue()
@@ -143,3 +145,25 @@ class ComponentTestCase(unittest.TestCase):
         self.component.start()
         sleep(1)
         self.assertTrue(self.component.is_alive())
+
+
+class SignalHandlerTestCase(TestCase):
+    def setUp(self):
+        pass
+
+    def tearDown(self):
+        pass
+
+    def test_setup_signal_handlers(self):
+        component = Component(MagicMock(), MagicMock(), MagicMock())
+        component._handle_stop_signal = MagicMock()
+        component.set_up()
+
+        current_pid = multiprocessing.current_process().pid
+
+        os.kill(current_pid, SIGTERM)
+        self.assertEqual(component._handle_stop_signal.call_count, 1)
+        component._handle_stop_signal.reset_mock()
+
+        os.kill(current_pid, SIGINT)
+        self.assertEqual(component._handle_stop_signal.call_count, 1)
