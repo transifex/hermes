@@ -13,8 +13,7 @@ test:
 deployment:
   coveralls:
     commands:
-     - coveralls
-
+      - coveralls
   rtfd:
     branch: master
     commands:
