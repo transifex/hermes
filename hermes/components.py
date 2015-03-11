@@ -136,19 +136,24 @@ class Component(LoggerMixin, Process):
 
     def _backoff(self):
         """
-
-        :return:
+        Backs off up to the provided backoff_limit.
         """
-        msg = _BACKOFF_EXCEPTION.format(self._backoff_limit)
+        msg = _BACKOFF_EXCEPTION.format(self.__backoff_time__)
         self.log.warning(msg, exc_info=True)
-        sleep(self._backoff_limit)
+
+        if self.__backoff_time__:
+            self.__backoff_time__ <<= 1
+            if self.__backoff_time__ > self._backoff_limit:
+                self.__backoff_time__ = 0
+        else:
+            self.__backoff_time__ = 1
+
+        sleep(self.__backoff_time__)
         self.log.warning('Retrying...')
 
     def _handle_stop_signal(self, sig, frame):
         """
-
-        :param sig:
-        :param frame:
-        :return:
+        Terminates the Component by setting the _should_run
+        flag to False.
         """
         self._should_run = False
