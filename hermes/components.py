@@ -19,6 +19,28 @@ class Component(LoggerMixin, Process):
     A class which can be used to create both listener and processor
     objects. Callers must implement :func:`~execute` and can others if
     they so choose.
+
+    The structure of calls::
+
+        +-----------------+
+        |      set_up     | <--------------+
+        +-----------------+                |
+                 +                         |
+                 |                         |
+                 |                         |   ERROR
+                 V                         |
+      +-----------------------+            |
+      |      pre_execute      |            |
+      |        execute        | +----------+
+      |      post_execute     |
+      +-----------------------+
+                 +
+                 |
+                 |
+                 V
+      +-----------------------+
+      |      tear_down        |
+      +-----------------------+
     """
 
     def __init__(self, notification_pipe, error_strategy,
@@ -31,9 +53,10 @@ class Component(LoggerMixin, Process):
         :param notification_pipe: The :class:`~multiprocessing.Pipe`-like
             object to perform :func:`~select.select` on.
         :param error_strategy: An object of type
-            :class:`~strategies.AbstractErrorStrategy` to handle exceptions.
+            :class:`~hermes.strategies.AbstractErrorStrategy` to handle
+            exceptions.
         :param error_queue: A :class:`~multiprocessing.Queue`-like object
-            to inform the :class:`~client.Client` through.
+            to inform the :class:`~hermes.client.Client` through.
         :param backoff_limit: The maximum number of seconds to backoff a
             Component until it resets.
         """
@@ -74,7 +97,7 @@ class Component(LoggerMixin, Process):
 
     def set_up(self):
         """
-        Called before execute and only once per iteration.
+        Called before execute methods and only once per iteration.
 
         Overridden methods should call super.
         """
@@ -83,9 +106,9 @@ class Component(LoggerMixin, Process):
 
     def tear_down(self):
         """
+        Called after execute methods and only once per iteration.
 
-
-        :return:
+        Can be used to tear down any resources.
         """
         pass
 
@@ -99,9 +122,9 @@ class Component(LoggerMixin, Process):
 
     def run(self):
         """
+        The main Component loop.
 
-
-        :return:
+        Callers should take great care when overriding.
         """
         super(Component, self).run()
         self.log.debug(_LOG_PID.format(self.pid))
@@ -169,8 +192,8 @@ class Component(LoggerMixin, Process):
     @property
     def ident(self):
         """
-        :return: :func:`~Process.ident` unless the Component has not
-            been started and returns None.
+        :return: :func:`~multiprocessing.Process.ident` unless the
+            Component has not been started and returns None.
         """
         try:
             return super(Component, self).ident
