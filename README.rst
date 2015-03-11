@@ -8,6 +8,11 @@ which you can build as little or as much as you like on top of.
 It's been used at Transifex to fulfil a number of roles, one of them
 including a Postgres -> Elasticsearch river.
 
+Documentation
+-------------
+The official docs can be found here_.
+
+.. _here: http://hermes-py.readthedocs.org/en/latest/
 
 Contribute
 ----------
@@ -24,3 +29,7 @@ Status
 
 .. image:: https://coveralls.io/repos/transifex/hermes/badge.svg?branch=be_graceful
     :target: https://coveralls.io/r/transifex/hermes?branch=be_graceful
+
+.. image:: https://readthedocs.org/projects/hermes-py/badge/?version=latest
+    :target: https://readthedocs.org/projects/hermes-py/?badge=latest
+    :alt: Documentation Status
