@@ -7,8 +7,7 @@ from hermes.log import LoggerMixin
 from hermes import strategies
 
 
-_LOG_PID_AND_MODULE_NAME = '"{}" started with PID:{}'
-
+_LOG_PID = 'Started with PID:{}'
 _HANDLED_EXCEPTION = 'Handled an exception'
 _TERMINATED_ON_EXCEPTION = 'Terminated due to exception'
 _UNHANDLED_EXCEPTION = 'An unhandled exception has been raised'
@@ -105,7 +104,7 @@ class Component(LoggerMixin, Process):
         :return:
         """
         super(Component, self).run()
-        self.log.debug(_LOG_PID_AND_MODULE_NAME.format(self.name, self.pid))
+        self.log.debug(_LOG_PID.format(self.pid))
         self._should_run = True
         while self._should_run:
             try:
