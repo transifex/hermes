@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from os.path import join
+from os.path import join, dirname
 
 from setuptools import setup, find_packages
 
@@ -17,7 +17,7 @@ tests_require = [
     'nosexcover'
 ]
 
-with open(join(__file__), 'README') as _file:
+with open(join(dirname(__file__), 'README')) as _file:
     long_desc = _file.read().strip()
 
 setup(
