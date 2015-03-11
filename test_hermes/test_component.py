@@ -1,4 +1,3 @@
-from __future__ import absolute_import
 from multiprocessing.queues import Queue
 import unittest
 from time import sleep
@@ -10,8 +9,8 @@ from psycopg2._psycopg import InterfaceError
 from hermes.components import Component
 from hermes.connectors import PostgresConnector
 from hermes.strategies import AbstractErrorStrategy, CommonErrorStrategy
-from tests import util
-from tests.util import rand_string
+
+import util
 
 
 _POSTGRES_DSN = {
@@ -72,7 +71,7 @@ class ComponentTestCase(unittest.TestCase):
         self.assertFalse(self.component.is_alive())
 
     def test_execute_called_on_notification(self):
-        error_string = rand_string(10)
+        error_string = util.rand_string(10)
 
         def mock_func(*args, **kwargs):
             """
@@ -94,7 +93,7 @@ class ComponentTestCase(unittest.TestCase):
             self.assertEqual(error_string, return_string)
 
     def test_execute_done_called_on_notification(self):
-        error_string = rand_string(10)
+        error_string = util.rand_string(10)
 
         def mock_func(*args, **kwargs):
             """

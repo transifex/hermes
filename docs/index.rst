@@ -29,10 +29,14 @@ that to the Client object like so::
     from hermes.components import Component
 
     class Processor(Component):
-        def execute(self):
-            pass
+        def __init__(self,)
+            super(Processor, self).__init__()
 
-        def execution
+        def execute(self):
+            # Do some amazing event-driven stuff
+            ...
+
+
 
 
 Contents

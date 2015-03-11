@@ -2,14 +2,9 @@ machine:
   environment:
     ALL_TESTS: 1
 
-dependencies:
-  override:
-    - pip install coverage
-    - pip install -r requirements/devel.txt
-
 test:
   override:
-    - nosetests --with-coverage --cover-package=hermes tests
+    - python setup.py test
 
 deployment:
   rtfd:
