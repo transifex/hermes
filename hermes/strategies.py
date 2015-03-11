@@ -28,11 +28,6 @@ class CommonErrorStrategy(AbstractErrorStrategy):
     BACKOFFABLE_MESSAGE = ('teminated abonormally', 'libpq')
 
     def handle_exception(self, error):
-        """
-
-        :param error:
-        :return:
-        """
         if isinstance(error, InterfaceError):
             return True, TERMINATE
 

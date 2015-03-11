@@ -12,15 +12,15 @@ class PostgresNotificationListener(Component):
     def __init__(self, pg_connector, notif_channel, notif_queue,
                  error_strategy, error_queue, fire_on_start=True):
         """
-        :param pg_connector: a :class:`~hermes.connectors.PostgresConnector`
+        :param pg_connector: A :class:`~hermes.connectors.PostgresConnector`
             object
-        :param notif_channel: the string representing the notification channel
+        :param notif_channel: The string representing the notification channel
             to listen to updates on
-        :param notif_queue: a :class:`~multiprocessing.Queue` to be used for
+        :param notif_queue: A :class:`~multiprocessing.Queue` to be used for
             notification events.
-        :param error_strategy: a :class:`~hermes.strategies.ErrorStrategy`
-            subclass
-        :param error_queue: a :class:`~multiprocessing.Queue` to be used for
+        :param error_strategy: A
+            :class:`~hermes.strategies.CommonErrorStrategy` subclass
+        :param error_queue: A :class:`~multiprocessing.Queue` to be used for
             error events.
         """
         super(PostgresNotificationListener, self).__init__(

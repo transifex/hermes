@@ -29,8 +29,8 @@ class PostgresConnector(object):
             # Pass the DSN to the PostgresConnector's constructor
             connector = PostgresConnector(dsn, cursor_factory=cursor_factory)
 
-        :param dsn: a Postgres-compatible DSN dictionary
-        :param cursor_factory: a callable :class:`~psycopg2.extensions.cursor`
+        :param dsn: A Postgres-compatible DSN dictionary
+        :param cursor_factory: A callable :class:`~psycopg2.extensions.cursor`
             subclass
         """
         self._dsn = dsn
@@ -48,7 +48,7 @@ class PostgresConnector(object):
         <http://www.postgresql.org/docs/current/static
         /ecpg-sql-set-autocommit.html>`_.
 
-        :return: a :class:`~psycopg2.extensions.connection` object
+        :return: A :class:`~psycopg2.extensions.connection` object
         """
         if self._pg_conn is None or self._pg_conn.closed:
             self._pg_conn = psycopg2.connect(
@@ -65,7 +65,7 @@ class PostgresConnector(object):
         Opens a postgres cursor if it doesn't exist or is closed. Otherwise
         returns the current cursor.
 
-        :return: a psycopg2 :class:`~psycopg2.extensions.cursor` instance or
+        :return: A psycopg2 :class:`~psycopg2.extensions.cursor` instance or
             subclass as defined by the cursor_factory passed to the
             constructor
         """
@@ -96,7 +96,7 @@ class PostgresConnector(object):
         """
         Enquires as to whether this server is a master or a slave.
 
-        :return: a boolean indicating whether the server is master.
+        :return: A boolean indicating whether the server is master.
         """
         with closing(self.pg_connection) as conn:
             with closing(conn.cursor()) as cursor:

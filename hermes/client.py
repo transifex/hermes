@@ -24,7 +24,8 @@ class Client(LoggerMixin, Process, FileSystemEventHandler):
     functions to start/stop both itself and its components. In addition, it is
     also capable of receiving file-system events via the 'watchdog' library.
 
-    General procedure::
+    General procedure:
+
         1. Starts both the Process and Listener components.
         2. Listen and act upon exit/error notifications from components
         3. Listen for file-system events and acts accordingly.
