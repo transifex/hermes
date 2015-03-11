@@ -5,7 +5,7 @@ Logging setup for hermes
 """
 
 import logging
-from logging import StreamHandler, Formatter, DEBUG
+from logging import StreamHandler, Formatter, INFO
 
 
 def get_logger(process):
@@ -14,7 +14,7 @@ def get_logger(process):
     stream_handler.setFormatter(
         Formatter('[%(asctime)s %(name)s %(levelname)s] %(message)s')
     )
-    logger.setLevel(DEBUG)
+    logger.setLevel(INFO)
     logger.addHandler(stream_handler)
     return logger
 
