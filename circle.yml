@@ -1,6 +1,6 @@
 machine:
   environment:
-    TX_ALL_TESTS: 1
+    ALL_TESTS: 1
 
 dependencies:
   override:

@@ -31,7 +31,7 @@ class ClientTestCase(unittest.TestCase):
         if not os.path.exists(_WATCH_PATH):
             os.removedirs(_WATCH_PATH)
 
-    @unittest.skipUnless(os.environ.get('TX_ALL_TESTS', False),
+    @unittest.skipUnless(os.environ.get('ALL_TESTS', False),
                          "Unittests only")
     def test_client_directory_watcher_when_server_master(self):
         # We have to monkey patch the 'is_server_master' function to ensure
@@ -57,7 +57,7 @@ class ClientTestCase(unittest.TestCase):
 
         PostgresConnector.is_server_master = old_func
 
-    @unittest.skipUnless(os.environ.get('TX_ALL_TESTS', False),
+    @unittest.skipUnless(os.environ.get('ALL_TESTS', False),
                          "Unittests only")
     def test_client_directory_watcher_when_server_slave(self):
         # We have to monkey patch the 'is_server_master' function to ensure
