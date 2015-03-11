@@ -20,15 +20,14 @@ from hermes.strategies import TERMINATE
 
 class Client(LoggerMixin, Process, FileSystemEventHandler):
     """
-    Hermes client. Responsible for Listener and Processor components. Provides
+    Responsible for Listener and Processor components. Provides
     functions to start/stop both itself and its components. In addition, it is
     also capable of receiving file-system events via the 'watchdog' library.
 
     General procedure::
-
         1. Starts both the Process and Listener components.
         2. Listen and act upon exit/error notifications from components
-        3. Listen for file-system events and act accordingly.
+        3. Listen for file-system events and acts accordingly.
     """
 
     def __init__(self, dsn, watch_path=None, failover_files=None):
@@ -73,10 +72,10 @@ class Client(LoggerMixin, Process, FileSystemEventHandler):
             # Start the client
             client.start()
 
-        :param dsn: a Postgres-compatible DSN dictionary
-        :param watch_path: the directory to monitor for filechanges. If None,
+        :param dsn: A Postgres-compatible DSN dictionary
+        :param watch_path: The directory to monitor for filechanges. If None,
             then file monitoring is disabled.
-        :param failover_files: a list of files which, when modified, will
+        :param failover_files: A list of files which, when modified, will
             cause the client to call :func:`~execute_role_based_procedure`
         """
         super(Client, self).__init__()
@@ -233,7 +232,7 @@ class Client(LoggerMixin, Process, FileSystemEventHandler):
         Listens to an event passed by 'watchdog' and checks the current
         master/slave status
 
-        :param event: a :class:`~watchdog.events.FileSystemEvent`
+        :param event: A :class:`~watchdog.events.FileSystemEvent`
         object passed by 'watchdog' indicating an event change within the
         specified directory.
         """
@@ -285,9 +284,6 @@ class Client(LoggerMixin, Process, FileSystemEventHandler):
 
         We must check both the processor and listener for 'liveness' and
         start those which have failed.
-
-        :param sig: the signal raised
-        :param frame: the provided frame struct
         """
         if sig == SIGCHLD and self._should_run and not self._exception_raised:
             try:
@@ -302,25 +298,27 @@ class Client(LoggerMixin, Process, FileSystemEventHandler):
                     )
                     self._shutdown()
             except Empty:
-                    self._child_interrupted = True
-                    self._start_components(restart=True)
+                self._child_interrupted = True
+                self._start_components(restart=True)
 
     def _handle_terminate(self, sig, frame):
         """
+        Handles SIGINT and SIGTERM signals.
 
-        :param sig:
-        :param frame:
-        :return:
+        If called from another process then puts to the exit queue, else
+        calls _shutdown.
         """
-        if self.pid != os.getpid():
+        if self.ident != os.getpid():
             self._exit_queue.put_nowait(True)
         else:
             self._shutdown()
 
     def _shutdown(self):
         """
-
-        :return:
+        Shuts down the Client:
+            * Sets '_should_run' to False.
+            * Stops the components.
+            * Stops the observer.
         """
         self.log.warning('Shutting down...')
         self._should_run = False

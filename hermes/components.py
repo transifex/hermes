@@ -12,12 +12,32 @@ _LOG_PID_AND_MODULE_NAME = '"{}" started with PID:{}'
 _HANDLED_EXCEPTION = 'Handled an exception'
 _TERMINATED_ON_EXCEPTION = 'Terminated due to exception'
 _UNHANDLED_EXCEPTION = 'An unhandled exception has been raised'
-_BACKOFF_EXCEPTION = 'Backing off {} due to an exception'
+_BACKOFF_EXCEPTION = 'Backing off {} seconds due to an exception'
 
 
 class Component(LoggerMixin, Process):
+    """
+    A class which can be used to create both listener and processor
+    objects. Callers must implement :func:`~execute` and can others if
+    they so choose.
+    """
+
     def __init__(self, notification_pipe, error_strategy,
-                 error_queue, backoff_limit=3):
+                 error_queue, backoff_limit=16):
+        """
+        The Component class adds a foundation for you to build a
+        fully-fledged processor or listener. You can add/modify as much
+        as you like - sensitive methods have been identified.
+
+        :param notification_pipe: The :class:`~multiprocessing.Pipe`-like
+            object to perform :func:`~select.select` on.
+        :param error_strategy: An object of type
+            :class:`~strategies.AbstractErrorStrategy` to handle exceptions.
+        :param error_queue: A :class:`~multiprocessing.Queue`-like object
+            to inform the :class:`~client.Client` through.
+        :param backoff_limit: The maximum number of seconds to backoff a
+            Component until it resets.
+        """
         self.error_strategy = error_strategy
         self.error_queue = error_queue
         self.notification_pipe = notification_pipe
@@ -25,21 +45,39 @@ class Component(LoggerMixin, Process):
         self._should_run = False
         self._backoff_limit = backoff_limit
 
+        self.__backoff_time__ = 0
+
     def pre_execute(self):
+        """
+        Can be safely overridden by callers. The return value will be
+        passed to :func:`~execute`.
+        """
         pass
 
     def execute(self, pre_exec_value):
+        """
+        Must be overridden by callers. The return value will be
+        passed to :func:`~post_execute`
+
+        :param pre_exec_value: The value returned by :func:`~pre_execute`
+        """
         raise NotImplementedError(
             "Subclasses MUST override the 'execute' method"
         )
 
     def post_execute(self, exec_value):
+        """
+        Can be safely overridden by callers.
+
+        :param exec_value: The value returned by :func:`~execute`
+        """
         pass
 
     def set_up(self):
         """
+        Called before execute and only once per iteration.
 
-        :return:
+        Overridden methods should call super.
         """
         signal(SIGTERM, self._handle_stop_signal)
         signal(SIGINT, self._handle_stop_signal)
@@ -47,17 +85,22 @@ class Component(LoggerMixin, Process):
     def tear_down(self):
         """
 
+
         :return:
         """
         pass
 
     def start(self):
+        """
+        Initialises the process, sets it to daemonic and starts.
+        """
         super(Component, self).__init__()
         self.daemon = True
         super(Component, self).start()
 
     def run(self):
         """
+
 
         :return:
         """
@@ -90,8 +133,8 @@ class Component(LoggerMixin, Process):
 
     def _execute(self):
         """
-
-        :return:
+        Loops through select -> post_exec(execute(pre_execute)) until
+        terminate is called or an exception is raised.
         """
         while self._should_run:
             ready_pipes, _, _ = select.select(
@@ -102,10 +145,12 @@ class Component(LoggerMixin, Process):
                 self.log.debug('Received notification, running execute')
                 self.post_execute(self.execute(self.pre_execute()))
 
+        self._backoff_time = 0
+
     def is_alive(self):
         """
-
-        :return:
+        :return: :func:`~Process.is_alive` unless the Component has
+            not been started and returns False.
         """
         try:
             return super(Component, self).is_alive()
@@ -114,9 +159,8 @@ class Component(LoggerMixin, Process):
 
     def join(self, **kwargs):
         """
-
-        :param kwargs:
-        :return:
+        :return: :func:`~Process.join` unless the Component has not
+            been started and returns immediately.
         """
         try:
             return super(Component, self).join(**kwargs)
@@ -126,8 +170,8 @@ class Component(LoggerMixin, Process):
     @property
     def ident(self):
         """
-
-        :return:
+        :return: :func:`~Process.ident` unless the Component has not
+            been started and returns None.
         """
         try:
             return super(Component, self).ident
