@@ -8,7 +8,7 @@ import unittest
 from mock import MagicMock
 
 from hermes.connectors import PostgresConnector
-from hermes.listeners import NotificationListener
+from hermes.listeners import PostgresNotificationListener
 from hermes.strategies import CommonErrorStrategy
 
 
@@ -22,7 +22,7 @@ class ListenerTestCase(unittest.TestCase):
     def setUp(self):
         pg_connector = PostgresConnector(_POSTGRES_DSN)
         self.notif_queue = Queue(1)
-        self.listener = NotificationListener(
+        self.listener = PostgresNotificationListener(
             pg_connector, _NOTIF_CHANNEL, self.notif_queue,
             CommonErrorStrategy(), Queue(), fire_on_start=False
         )

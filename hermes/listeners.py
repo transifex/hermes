@@ -3,7 +3,7 @@ from Queue import Full
 from components import Component
 
 
-class NotificationListener(Component):
+class PostgresNotificationListener(Component):
     """
     A listener to detect event notifications from Postgres and pass onto to
     a processor.
@@ -23,7 +23,7 @@ class NotificationListener(Component):
         :param error_queue: a :class:`~multiprocessing.Queue` to be used for
             error events.
         """
-        super(NotificationListener, self).__init__(
+        super(PostgresNotificationListener, self).__init__(
             pg_connector.pg_connection, error_strategy, error_queue
         )
         self._fire_on_start = fire_on_start
@@ -32,7 +32,7 @@ class NotificationListener(Component):
         self.pg_connector = pg_connector
 
     def set_up(self):
-        super(NotificationListener, self).set_up()
+        super(PostgresNotificationListener, self).set_up()
         self.notification_pipe = self.pg_connector.pg_connection
 
         self.pg_connector.pg_cursor.execute(
@@ -55,5 +55,5 @@ class NotificationListener(Component):
                 pass
 
     def tear_down(self):
-        super(NotificationListener, self).tear_down()
+        super(PostgresNotificationListener, self).tear_down()
         self.pg_connector.disconnect()
