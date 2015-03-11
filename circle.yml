@@ -2,6 +2,10 @@ machine:
   environment:
     ALL_TESTS: 1
 
+dependencies:
+  override:
+    - pip install coveralls
+
 test:
   override:
     - python setup.py test

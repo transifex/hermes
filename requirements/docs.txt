@@ -1,2 +1,0 @@
--r devel.txt
-sphinx_rtd_theme
