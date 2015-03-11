@@ -5,5 +5,8 @@ Strategies
 
 .. py:module:: hermes.strategies
 
-.. autoclass:: ErrorStrategy
+.. autoclass:: AbstractErrorStrategy
+   :members:
+
+.. autoclass:: CommonErrorStrategy
    :members:

@@ -5,6 +5,6 @@ Listeners
 
 .. py:module:: hermes.listeners
 
-.. autoclass:: NotificationListener
+.. autoclass:: PostgresNotificationListener
    :members:
    :show-inheritance:
