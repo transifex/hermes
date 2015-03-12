@@ -140,11 +140,11 @@ class Component(LoggerMixin, Process):
                 if action == strategies.CONTINUE:
                     self.log.warning(_HANDLED_EXCEPTION, exc_info=True)
                     continue
-                elif action == strategies.TERMINATE:
-                    self.log.warning(_TERMINATED_ON_EXCEPTION, exc_info=True)
                 elif action == strategies.BACKOFF:
                     self._backoff()
                     continue
+                elif expected and action == strategies.TERMINATE:
+                    self.log.warning(_TERMINATED_ON_EXCEPTION, exc_info=True)
                 else:
                     self.log.critical(_UNHANDLED_EXCEPTION, exc_info=True)
 
@@ -167,7 +167,7 @@ class Component(LoggerMixin, Process):
                 self.log.debug('Received notification, running execute')
                 self.post_execute(self.execute(self.pre_execute()))
 
-        self._backoff_time = 0
+        self.__backoff_time__ = 0
 
     def is_alive(self):
         """
