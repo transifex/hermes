@@ -252,7 +252,7 @@ class RunExceptionHandlingTestCase(TestCase):
                 component.log = MagicMock()
 
                 component._execute = MagicMock(side_effect=Exception)
-                component.error_strategy = MagicMock(
+                component.error_strategy.handle_exception = MagicMock(
                     return_value=(None, CONTINUE)
                 )
                 component.tear_down = MagicMock(side_effect=Exception)
