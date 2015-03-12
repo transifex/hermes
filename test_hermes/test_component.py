@@ -193,7 +193,7 @@ class ComponentTestCase(TestCase):
         self.assertEqual(self.component.execute.call_count, 1)
         self.assertEqual(self.component.pre_execute.call_count, 1)
 
-        self.assertEqual(self.component._backoff_time, 0)
+        self.assertEqual(self.component.__backoff_time__, 0)
 
     def test_main_loop_is_called(self):
         with patch('hermes.log.get_logger'):
