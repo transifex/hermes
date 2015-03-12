@@ -210,7 +210,7 @@ class Component(LoggerMixin, Process):
         if self.__backoff_time__:
             self.__backoff_time__ <<= 1
             if self.__backoff_time__ > self._backoff_limit:
-                self.__backoff_time__ = 0
+                self.__backoff_time__ = 1
         else:
             self.__backoff_time__ = 1
 
