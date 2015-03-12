@@ -194,6 +194,32 @@ class ComponentTestCase(TestCase):
 
         self.assertEqual(self.component._backoff_time, 0)
 
+    def test_main_loop_is_called(self):
+        with patch('hermes.log.get_logger'):
+            with patch('multiprocessing.Process.start'):
+                self.component.set_up = MagicMock()
+                self.component._execute = MagicMock()
+                self.component.tear_down = MagicMock(side_effect=Exception)
+                self.component.start()
+
+                self.assertRaises(Exception, self.component.run)
+
+                self.assertEqual(self.component.set_up.call_count, 1)
+                self.assertEqual(self.component._execute.call_count, 1)
+                self.assertEqual(self.component.tear_down.call_count, 1)
+
+    def test_breaks_on_interrupt(self):
+        with patch('hermes.log.get_logger'):
+            with patch('multiprocessing.Process.start'):
+                self.component.set_up = MagicMock(side_effect=select.error)
+                self.component.tear_down = MagicMock(side_effect=Exception)
+                self.component.start()
+
+                self.assertRaises(Exception, self.component.run)
+
+                self.assertEqual(self.component.set_up.call_count, 1)
+                self.assertEqual(self.component.tear_down.call_count, 1)
+
 
 class SignalHandlerTestCase(TestCase):
     def test_setup_signal_handlers(self):
