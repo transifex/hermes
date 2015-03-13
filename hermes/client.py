@@ -174,12 +174,15 @@ class Client(LoggerMixin, Process, FileSystemEventHandler):
         while self._should_run:
             self._exception_raised = self._child_interrupted = False
             try:
+                exit_pipe = self._exit_queue._reader
+
                 ready_pipes, _, _ = select.select(
-                    (self._exit_queue._reader, ), (), ()
+                    (exit_pipe, ), (), ()
                 )
 
-                if self._exit_queue in ready_pipes:
+                if exit_pipe in ready_pipes:
                     self.terminate()
+
             except select.error:
                 if not self._child_interrupted and not self._exception_raised:
                     self._should_run = False
