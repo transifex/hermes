@@ -14,24 +14,13 @@ from hermes.components import Component
 from hermes.connectors import PostgresConnector
 from hermes.strategies import AbstractErrorStrategy, CommonErrorStrategy, \
     TERMINATE, BACKOFF, CONTINUE
+from test_hermes.util import LimitedTrueBool
 import util
 
 
 _POSTGRES_DSN = {
     'database': 'test_hermes'
 }
-
-
-class OnceTrueBool(int):
-    def __init__(self, x):
-        super(OnceTrueBool, self).__init__(x)
-        self.called = False
-
-    def __nonzero__(self):
-        if not self.called:
-            self.called = True
-            return True
-        return False
 
 
 class ComponentTestCase(TestCase):
@@ -177,7 +166,7 @@ class ComponentTestCase(TestCase):
         self.assertIsNone(return_value)
 
     def test_execute_gets_notification_and_calls_execute_funcs(self):
-        self.component._should_run = OnceTrueBool(1)
+        self.component._should_run = LimitedTrueBool(1)
         self.component._backoff_time = randint(1, 10000)
 
         self.component.execute = MagicMock()
