@@ -111,7 +111,9 @@ class FunctionalListenerTestCase(TestCase):
         self.listener.notif_queue.put_nowait.assert_called_once_with(True)
 
         # Check Full exception is ignored
+        self.listener.notif_queue.put_nowait.reset_mock()
         self.listener.notif_queue.put_nowait.side_effect = Full
+        self.listener.set_up()
         self.listener.notif_queue.put_nowait.assert_called_once_with(True)
 
     def test_execute_pops_number_of_notifications(self):
