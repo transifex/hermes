@@ -7,7 +7,8 @@ from unittest import TestCase, skipUnless
 from signal import SIGINT, SIGCHLD
 from select import error as select_error
 
-from mock import MagicMock, patch
+from mock import MagicMock, patch, PropertyMock
+from os import getpid
 
 from hermes.client import Client
 from hermes.components import Component
@@ -263,7 +264,7 @@ class ClientStartupTestCase(TestCase):
         client._processor.join.assert_called_once_with()
 
 
-class ClientStopTestCase(TestCase):
+class ClientShutdownTestCase(TestCase):
     def test_shutdown(self):
         client = Client(MagicMock())
         client.log = MagicMock()
@@ -294,6 +295,29 @@ class ClientStopTestCase(TestCase):
         client._listener.terminate.assert_called_once_with()
         client._listener.join.assert_called_once_with()
         client._processor.join.assert_called_once_with()
+
+    def test_handle_terminate_when_same_process(self):
+        with patch('hermes.client.Client.ident',
+                   new_callable=PropertyMock) as mock_ident:
+            client = Client(MagicMock())
+            client._shutdown = MagicMock()
+            mock_ident.return_value = getpid()
+
+            client._handle_terminate(None, None)
+            client._shutdown.assert_called_once_with()
+
+    def test_handle_terminate_when_different_process(self):
+        with patch('hermes.client.Client.ident',
+                   new_callable=PropertyMock) as mock_ident:
+            client = Client(MagicMock())
+            client._exit_queue = MagicMock()
+            client._shutdown = MagicMock()
+
+            current_pid = getpid()
+            mock_ident.return_value = current_pid + 1
+
+            client._handle_terminate(None, None)
+            client._exit_queue.put_nowait.assert_called_once_with(True)
 
 
 class ClientRunProcedureTestCase(TestCase):
