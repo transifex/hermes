@@ -14,6 +14,7 @@ from hermes.client import Client
 from hermes.components import Component
 from hermes.connectors import PostgresConnector
 from hermes.exceptions import InvalidConfigurationException
+from hermes.strategies import TERMINATE
 
 
 _WATCH_PATH = '/tmp/hermes_test'
@@ -318,6 +319,66 @@ class ClientShutdownTestCase(TestCase):
 
             client._handle_terminate(None, None)
             client._exit_queue.put_nowait.assert_called_once_with(True)
+
+    def test_handle_sigchld_when_should_not_run(self):
+        client = Client(MagicMock())
+        client._processor = MagicMock()
+
+        client._should_run = False
+        client._handle_sigchld(None, None)
+
+        self.assertEqual(
+            client._processor.error_queue.get_nowait.call_count, 0
+        )
+
+    def test_handle_sigchld_when_expected_error_and_terminate(self):
+        client = Client(MagicMock())
+        client._processor = MagicMock()
+        client.execute_role_based_procedure = MagicMock()
+        client._processor.error_queue.get_nowait.return_value = (
+            True,  TERMINATE
+        )
+
+        client._should_run = True
+        client._exception_raised = False
+
+        client._handle_sigchld(SIGCHLD, None)
+        client._processor.error_queue.get_nowait.assert_called_once_with()
+        self.assertTrue(client._exception_raised)
+        client.execute_role_based_procedure.assert_called_once_with()
+
+    def test_handle_sigchld_when_not_expected(self):
+        client = Client(MagicMock())
+        client.log = MagicMock()
+        client._processor = MagicMock()
+        client._shutdown = MagicMock()
+        client._processor.error_queue.get_nowait.return_value = (
+            False,  TERMINATE
+        )
+
+        client._should_run = True
+        client._exception_raised = False
+
+        client._handle_sigchld(SIGCHLD, None)
+        client._processor.error_queue.get_nowait.assert_called_once_with()
+        self.assertTrue(client._exception_raised)
+        client._shutdown.assert_called_once_with()
+
+    def test_handle_sigchld_when_queue_is_empty(self):
+        client = Client(MagicMock())
+        client._start_components = MagicMock()
+        client._processor = MagicMock()
+        client._processor.error_queue.get_nowait.side_effect = Empty
+
+        client._should_run = True
+        client._exception_raised = False
+
+        client._handle_sigchld(SIGCHLD, None)
+
+        client._processor.error_queue.get_nowait.assert_called_once_with()
+        self.assertFalse(client._exception_raised)
+        self.assertTrue(client._child_interrupted)
+        client._start_components.assert_called_once_with(restart=True)
 
 
 class ClientRunProcedureTestCase(TestCase):
