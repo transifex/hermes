@@ -22,7 +22,7 @@ _POSTGRES_DSN = {
 }
 
 
-class ClientTestCase(TestCase):
+class RunningClientTestCase(TestCase):
     def setUp(self):
         # Create the folder
         if not os.path.exists(_WATCH_PATH):
@@ -119,7 +119,7 @@ class ClientComponentTestCase(TestCase):
     def test_add_processor_throws_on_non_component(self):
         client = Client(MagicMock(), MagicMock())
         self.assertRaises(InvalidConfigurationException,
-                          client.add_listener,
+                          client.add_processor,
                           3)
 
     def test_add_listener_accepts_component(self):
