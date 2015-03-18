@@ -6,9 +6,10 @@ import os
 from unittest import TestCase, skipUnless
 from signal import SIGINT, SIGCHLD
 from select import error as select_error
+from os import getpid
 
 from mock import MagicMock, patch, PropertyMock
-from os import getpid
+from psycopg2 import OperationalError
 
 from hermes.client import Client
 from hermes.components import Component
@@ -336,7 +337,7 @@ class ClientShutdownTestCase(TestCase):
         client._processor = MagicMock()
         client.execute_role_based_procedure = MagicMock()
         client._processor.error_queue.get_nowait.return_value = (
-            True,  TERMINATE
+            True, TERMINATE
         )
 
         client._should_run = True
@@ -353,7 +354,7 @@ class ClientShutdownTestCase(TestCase):
         client._processor = MagicMock()
         client._shutdown = MagicMock()
         client._processor.error_queue.get_nowait.return_value = (
-            False,  TERMINATE
+            False, TERMINATE
         )
 
         client._should_run = True
@@ -441,3 +442,42 @@ class ClientRunProcedureTestCase(TestCase):
                 client.execute_role_based_procedure = MagicMock()
                 client.run()
                 self.assertFalse(client._should_run)
+
+
+class RoleBasedProceduresTestCase(TestCase):
+    def test_when_server_is_master(self):
+        client = Client(MagicMock())
+        client.log = MagicMock()
+        client._start_components = MagicMock()
+        client.master_pg_conn = MagicMock()
+        client.master_pg_conn.is_server_master.return_value = True
+
+        client.execute_role_based_procedure()
+
+        client._start_components.assert_called_once_with(restart=True)
+
+    def test_when_server_is_slave(self):
+        client = Client(MagicMock())
+        client.log = MagicMock()
+        client._stop_components = MagicMock()
+        client.master_pg_conn = MagicMock()
+        client.master_pg_conn.is_server_master.return_value = False
+
+        client.execute_role_based_procedure()
+
+        client._stop_components.assert_called_once_with()
+
+    def test_when_server_is_down_and_no_backoff(self):
+        with patch('hermes.client.sleep') as mock_sleep:
+            mock_sleep.side_effect = Exception('Break out of loop')
+
+            client = Client(MagicMock())
+            client.log = MagicMock()
+            client._stop_components = MagicMock()
+            client.master_pg_conn = MagicMock()
+            client.master_pg_conn.is_server_master.side_effect = OperationalError
+
+            self.assertRaises(Exception, client.execute_role_based_procedure)
+
+            client._stop_components.assert_called_once_with()
+            mock_sleep.assert_called_once_with(1)
