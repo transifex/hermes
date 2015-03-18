@@ -14,6 +14,7 @@ from hermes.components import Component
 from hermes.connectors import PostgresConnector
 from hermes.exceptions import InvalidConfigurationException
 
+from select import error as select_error
 
 _WATCH_PATH = '/tmp/hermes_test'
 _FAILOVER_FILES = ('recovery.conf', 'recovery.done')
@@ -275,3 +276,10 @@ class ClientRunProcedureTestCase(TestCase):
                 self.assertRaises(Exception, client.run)
                 client.terminate.assert_called_once_with()
 
+    def test_client_sets_run_flag_on_interrupt(self):
+        with patch('hermes.log.get_logger'):
+            with patch('select.select', side_effect=select_error):
+                client = Client(MagicMock())
+                client.execute_role_based_procedure = MagicMock()
+                client.run()
+                self.assertFalse(client._should_run)
