@@ -263,6 +263,27 @@ class ClientStartupTestCase(TestCase):
         client._processor.join.assert_called_once_with()
 
 
+class ClientStopTestCase(TestCase):
+    def test_stop_terminates(self):
+        client = Client(MagicMock())
+
+        client._processor = MagicMock()
+        client._listener = MagicMock()
+
+        client._processor.ident.return_value = True
+        client._listener.ident.return_value = True
+
+        client._processor.is_alive.return_value = True
+        client._listener.is_alive.return_value = True
+
+        client._stop_components()
+
+        client._processor.terminate.assert_called_once_with()
+        client._listener.terminate.assert_called_once_with()
+        client._listener.join.assert_called_once_with()
+        client._processor.join.assert_called_once_with()
+
+
 class ClientRunProcedureTestCase(TestCase):
     def test_initial_run_funcs(self):
         with patch('hermes.log.get_logger'):
