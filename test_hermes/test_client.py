@@ -166,6 +166,45 @@ class ValidateComponentsTestCase(TestCase):
                           client._validate_components)
 
 
+class WatchdogObserverTestCase(TestCase):
+    def setUp(self):
+        self.client = Client(MagicMock())
+        self.client.directory_observer = MagicMock()
+
+    def test_start_schedules_obeserver_if_watch_path(self):
+        self.client._watch_path = randint(50, 1000)
+
+        self.client._start_observer()
+        self.client.directory_observer.schedule.assert_called_once_with(
+            self.client, self.client._watch_path, recursive=False
+        )
+        self.client.directory_observer.start.assert_called_once_with()
+
+    def test_start_not_schedule_observer_if_none_watch_path(self):
+        self.client._watch_path = None
+
+        self.client._start_observer()
+        self.assertEqual(self.client.directory_observer.schedule.call_count, 0)
+        self.assertEqual(self.client.directory_observer.start.call_count, 0)
+
+    def test_stop_stops_observer_if_watch_path_and_observer(self):
+        self.client.directory_observer.is_alive.return_value = True
+        self.client._watch_path = True
+        self.client._stop_observer()
+        self.client.directory_observer.stop.assert_called_once_with()
+
+    def test_stop_does_not_stop_observer_on_none(self):
+        self.client._watch_path = None
+        self.client._stop_observer()
+        self.assertEqual(self.client.directory_observer.stop.call_count, 0)
+
+    def test_stop_does_not_stop_on_dead(self):
+        self.client._watch_path = True
+        self.client.directory_observer.is_alive.return_value = False
+        self.client._stop_observer()
+        self.assertEqual(self.client.directory_observer.stop.call_count, 0)
+
+
 class ClientStartupTestCase(TestCase):
     def test_startup_functions_are_called(self):
         with patch('multiprocessing.Process.start') as mock_process_start:
@@ -235,3 +274,4 @@ class ClientRunProcedureTestCase(TestCase):
 
                 self.assertRaises(Exception, client.run)
                 client.terminate.assert_called_once_with()
+

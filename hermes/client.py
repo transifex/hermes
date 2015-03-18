@@ -227,7 +227,7 @@ class Client(LoggerMixin, Process, FileSystemEventHandler):
         """
         Stops the observer if it is 'alive'
         """
-        if self._watch_path:
+        if self._watch_path and self.directory_observer:
             if self.directory_observer.is_alive():
                 self.directory_observer.stop()
 
