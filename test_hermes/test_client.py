@@ -4,17 +4,16 @@ from random import randint
 from time import sleep
 import os
 from unittest import TestCase, skipUnless
+from signal import SIGINT, SIGCHLD
+from select import error as select_error
 
 from mock import MagicMock, patch
-
-from signal import SIGINT, SIGCHLD
 
 from hermes.client import Client
 from hermes.components import Component
 from hermes.connectors import PostgresConnector
 from hermes.exceptions import InvalidConfigurationException
 
-from select import error as select_error
 
 _WATCH_PATH = '/tmp/hermes_test'
 _FAILOVER_FILES = ('recovery.conf', 'recovery.done')
@@ -126,15 +125,15 @@ class ClientComponentTestCase(TestCase):
     def test_add_listener_accepts_component(self):
         client = Client(MagicMock())
         client.add_listener(Component(MagicMock(),
-                                      MagicMock(),
-                                      MagicMock()))
+            MagicMock(),
+            MagicMock()))
         self.assertIsInstance(client._listener, Component)
 
     def test_add_processor_accepts_component(self):
         client = Client(MagicMock(), MagicMock())
         client.add_processor(Component(MagicMock(),
-                                       MagicMock(),
-                                       MagicMock()))
+            MagicMock(),
+            MagicMock()))
         self.assertIsInstance(client._processor, Component)
 
 
@@ -221,6 +220,47 @@ class ClientStartupTestCase(TestCase):
                 )
                 client._validate_components.assert_called_once_with()
                 mock_process_start.assert_called_once_with()
+
+    def test_initial_start_components(self):
+        client = Client(MagicMock())
+
+        client._processor = MagicMock()
+        client._processor.is_alive.return_value = False
+
+        client._listener = MagicMock()
+        client._listener.is_alive.return_value = False
+
+        client._start_components()
+        client._listener.start.assert_called_once_with()
+        client._processor.start.assert_called_once_with()
+
+    def test_start_components_when_components_running(self):
+        client = Client(MagicMock())
+
+        client._processor = MagicMock()
+        client._processor.is_alive.return_value = True
+
+        client._listener = MagicMock()
+        client._listener.is_alive.return_value = True
+
+        client._start_components()
+        self.assertEqual(client._listener.start.call_count, 0)
+        self.assertEqual(client._processor.start.call_count, 0)
+
+    def test_join_is_called_on_restart(self):
+        client = Client(MagicMock())
+
+        client._processor = MagicMock()
+        client._processor.is_alive.return_value = False
+        client._processor.ident.return_value = True
+
+        client._listener = MagicMock()
+        client._listener.is_alive.return_value = False
+        client._listener.ident.return_value = True
+
+        client._start_components(restart=True)
+        client._listener.join.assert_called_once_with()
+        client._processor.join.assert_called_once_with()
 
 
 class ClientRunProcedureTestCase(TestCase):
