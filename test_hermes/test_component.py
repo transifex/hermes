@@ -1,15 +1,20 @@
 from multiprocessing.queues import Queue
-import unittest
+from random import randint
+from unittest import TestCase
 from time import sleep
 import select
+import os
+import multiprocessing
+from signal import SIGTERM, SIGINT
 
 from mock import MagicMock, patch
 from psycopg2._psycopg import InterfaceError
 
 from hermes.components import Component
 from hermes.connectors import PostgresConnector
-from hermes.strategies import AbstractErrorStrategy, CommonErrorStrategy
-
+from hermes.strategies import AbstractErrorStrategy, CommonErrorStrategy, \
+    TERMINATE, BACKOFF, CONTINUE
+from test_hermes.util import LimitedTrueBool
 import util
 
 
@@ -18,7 +23,7 @@ _POSTGRES_DSN = {
 }
 
 
-class ComponentTestCase(unittest.TestCase):
+class ComponentTestCase(TestCase):
     def setUp(self):
         self.notif_queue = Queue(1)
         self.error_queue = Queue()
@@ -26,6 +31,7 @@ class ComponentTestCase(unittest.TestCase):
                                    CommonErrorStrategy(),
                                    self.error_queue,
                                    PostgresConnector(_POSTGRES_DSN))
+        self.component.log = MagicMock()
 
     def tearDown(self):
         # Component can have an attribute error on _parent_pid due to the fact
@@ -143,3 +149,204 @@ class ComponentTestCase(unittest.TestCase):
         self.component.start()
         sleep(1)
         self.assertTrue(self.component.is_alive())
+
+    def test_isalive_is_false_on_attr_error(self):
+        self.assertRaises(AttributeError, lambda: self.component._popen)
+        return_value = self.component.is_alive()
+        self.assertFalse(return_value)
+
+    def test_ident_is_none_on_attr_error(self):
+        self.assertRaises(AttributeError, lambda: self.component._popen)
+        return_value = self.component.ident
+        self.assertIsNone(return_value)
+
+    def test_join_returns_on_no_process(self):
+        self.assertRaises(AttributeError, lambda: self.component._popen)
+        return_value = self.component.join()
+        self.assertIsNone(return_value)
+
+    def test_execute_gets_notification_and_calls_execute_funcs(self):
+        self.component._should_run = LimitedTrueBool(1)
+        self.component._backoff_time = randint(1, 10000)
+
+        self.component.execute = MagicMock()
+        self.component.post_execute = MagicMock()
+        self.component.pre_execute = MagicMock()
+
+        # Put the notification so it will immediately return from select
+        self.notif_queue.put(True)
+
+        self.component._execute()
+
+        self.assertEqual(self.component.post_execute.call_count, 1)
+        self.assertEqual(self.component.execute.call_count, 1)
+        self.assertEqual(self.component.pre_execute.call_count, 1)
+
+        self.assertEqual(self.component.__backoff_time__, 0)
+
+    def test_main_loop_is_called(self):
+        with patch('hermes.log.get_logger'):
+            with patch('multiprocessing.Process.start'):
+                self.component.set_up = MagicMock()
+                self.component._execute = MagicMock()
+                self.component.tear_down = MagicMock(side_effect=Exception)
+                self.component.start()
+
+                self.assertRaises(Exception, self.component.run)
+
+                self.assertEqual(self.component.set_up.call_count, 1)
+                self.assertEqual(self.component._execute.call_count, 1)
+                self.assertEqual(self.component.tear_down.call_count, 1)
+
+    def test_breaks_on_interrupt(self):
+        with patch('hermes.log.get_logger'):
+            with patch('multiprocessing.Process.start'):
+                self.component.set_up = MagicMock(side_effect=select.error)
+                self.component.tear_down = MagicMock(side_effect=Exception)
+                self.component.start()
+
+                self.assertRaises(Exception, self.component.run)
+
+                self.assertEqual(self.component.set_up.call_count, 1)
+                self.assertEqual(self.component.tear_down.call_count, 1)
+
+
+class SignalHandlerTestCase(TestCase):
+    def test_setup_signal_handlers(self):
+        component = Component(MagicMock(), MagicMock(), MagicMock())
+        component._handle_stop_signal = MagicMock()
+        component.set_up()
+
+        current_pid = multiprocessing.current_process().pid
+
+        os.kill(current_pid, SIGTERM)
+        self.assertEqual(component._handle_stop_signal.call_count, 1)
+        component._handle_stop_signal.reset_mock()
+
+        os.kill(current_pid, SIGINT)
+        self.assertEqual(component._handle_stop_signal.call_count, 1)
+
+    def test_should_run_is_set_to_false_on_stop_signal(self):
+        component = Component(MagicMock(), MagicMock(), MagicMock())
+        component._should_run = True
+        component._handle_stop_signal(None, None)
+        self.assertFalse(component._should_run)
+
+
+class RunExceptionHandlingTestCase(TestCase):
+    def test_continue_re_runs_main_loop(self):
+        with patch('hermes.log.get_logger'):
+            with patch('multiprocessing.Process.start'):
+                component = Component(MagicMock(), MagicMock(), MagicMock())
+                component.log = MagicMock()
+
+                component._execute = MagicMock(side_effect=Exception)
+                component.error_strategy.handle_exception = MagicMock(
+                    return_value=(None, CONTINUE)
+                )
+                component.tear_down = MagicMock(side_effect=Exception)
+                component.set_up = MagicMock()
+                component.start()
+                self.assertRaises(Exception, component.run)
+
+                self.assertEqual(component.tear_down.call_count, 1)
+                self.assertEqual(component._execute.call_count, 1)
+
+                self.assertTrue(component._should_run)
+
+    def test_backoff_calls_backoff_function_and_continues(self):
+        with patch('hermes.log.get_logger'):
+            with patch('multiprocessing.Process.start'):
+                component = Component(MagicMock(), MagicMock(), MagicMock())
+                component.log = MagicMock()
+
+                component._execute = MagicMock(side_effect=Exception)
+                component.error_strategy.handle_exception = MagicMock(
+                    return_value=(None, BACKOFF)
+                )
+                component._backoff = MagicMock()
+                component.tear_down = MagicMock(side_effect=Exception)
+                component.set_up = MagicMock()
+                component.start()
+
+                self.assertRaises(Exception, component.run)
+                self.assertEqual(component.tear_down.call_count, 1)
+                self.assertEqual(component._execute.call_count, 1)
+                self.assertTrue(component._should_run)
+                self.assertEqual(component._backoff.call_count, 1)
+
+    def test_expected_terminate_cancels_main_loop(self):
+        with patch('hermes.log.get_logger'):
+            with patch('multiprocessing.Process.start'):
+                component = Component(MagicMock(), MagicMock(), MagicMock())
+                component.log = MagicMock()
+
+                component._execute = MagicMock(side_effect=Exception)
+                component.error_strategy.handle_exception = MagicMock(
+                    return_value=(True, TERMINATE)
+                )
+                component._backoff = MagicMock()
+                component.tear_down = MagicMock(side_effect=Exception)
+                component.set_up = MagicMock()
+                component.start()
+
+                self.assertRaises(Exception, component.run)
+                self.assertEqual(component.tear_down.call_count, 1)
+                self.assertEqual(component._execute.call_count, 1)
+                self.assertFalse(component._should_run)
+
+    def test_unexpected_terminate_cancels_main_loop(self):
+        with patch('hermes.log.get_logger'):
+            with patch('multiprocessing.Process.start'):
+                component = Component(MagicMock(), MagicMock(), MagicMock())
+                component.log = MagicMock()
+
+                component._execute = MagicMock(side_effect=Exception)
+                component.error_strategy.handle_exception = MagicMock(
+                    return_value=(False, TERMINATE)
+                )
+                component._backoff = MagicMock()
+                component.tear_down = MagicMock(side_effect=Exception)
+                component.set_up = MagicMock()
+                component.start()
+
+                self.assertRaises(Exception, component.run)
+                self.assertEqual(component.tear_down.call_count, 1)
+                self.assertEqual(component._execute.call_count, 1)
+                self.assertFalse(component._should_run)
+
+
+class BackoffTimingTestCase(TestCase):
+    def test_backoff_is_one_on_zero(self):
+        with patch('hermes.components.sleep') as mock_sleep:
+            component = Component(MagicMock(), MagicMock(), MagicMock())
+            component.log = MagicMock()
+            component._backoff()
+
+            mock_sleep.assert_called_once_with(component.__backoff_time__)
+            self.assertEqual(component.__backoff_time__, 1)
+
+    def test_backoff_resets_to_one_when_over_limt(self):
+        with patch('hermes.components.sleep') as mock_sleep:
+            component = Component(MagicMock(), MagicMock(), MagicMock())
+            component.log = MagicMock()
+
+            component.__backoff_time__ = component._backoff_limit + 1
+            component._backoff()
+
+            mock_sleep.assert_called_once_with(component.__backoff_time__)
+            self.assertEqual(component.__backoff_time__, 1)
+
+    def test_binary_backoff_implemented(self):
+        with patch('hermes.components.sleep') as mock_sleep:
+            component = Component(MagicMock(), MagicMock(), MagicMock())
+            component.log = MagicMock()
+
+            component.__backoff_time__ = randint(1, 1000)
+            component._backoff_limit = component.__backoff_time__ << 3
+            expected_value = component.__backoff_time__ << 1
+
+            component._backoff()
+
+            mock_sleep.assert_called_once_with(expected_value)
+            self.assertEqual(component.__backoff_time__, expected_value)

@@ -10,12 +10,13 @@ from logging import StreamHandler, Formatter, INFO
 
 def get_logger(process):
     logger = logging.getLogger(process.name)
-    stream_handler = StreamHandler()
-    stream_handler.setFormatter(
-        Formatter('[%(asctime)s %(name)s %(levelname)s] %(message)s')
-    )
-    logger.setLevel(INFO)
-    logger.addHandler(stream_handler)
+    if not logger.handlers:
+        stream_handler = StreamHandler()
+        stream_handler.setFormatter(
+            Formatter('[%(asctime)s %(name)s %(levelname)s] %(message)s')
+        )
+        logger.setLevel(INFO)
+        logger.addHandler(stream_handler)
     return logger
 
 

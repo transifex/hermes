@@ -74,7 +74,7 @@ class Component(LoggerMixin, Process):
         Can be safely overridden by callers. The return value will be
         passed to :func:`~execute`.
         """
-        pass
+        pass  # pragma: no cover
 
     def execute(self, pre_exec_value):
         """
@@ -93,7 +93,7 @@ class Component(LoggerMixin, Process):
 
         :param exec_value: The value returned by :func:`~execute`
         """
-        pass
+        pass  # pragma: no cover
 
     def set_up(self):
         """
@@ -110,7 +110,7 @@ class Component(LoggerMixin, Process):
 
         Can be used to tear down any resources.
         """
-        pass
+        pass  # pragma: no cover
 
     def start(self):
         """
@@ -140,11 +140,11 @@ class Component(LoggerMixin, Process):
                 if action == strategies.CONTINUE:
                     self.log.warning(_HANDLED_EXCEPTION, exc_info=True)
                     continue
-                elif action == strategies.TERMINATE:
-                    self.log.warning(_TERMINATED_ON_EXCEPTION, exc_info=True)
                 elif action == strategies.BACKOFF:
                     self._backoff()
                     continue
+                elif expected and action == strategies.TERMINATE:
+                    self.log.warning(_TERMINATED_ON_EXCEPTION, exc_info=True)
                 else:
                     self.log.critical(_UNHANDLED_EXCEPTION, exc_info=True)
 
@@ -167,7 +167,7 @@ class Component(LoggerMixin, Process):
                 self.log.debug('Received notification, running execute')
                 self.post_execute(self.execute(self.pre_execute()))
 
-        self._backoff_time = 0
+        self.__backoff_time__ = 0
 
     def is_alive(self):
         """
@@ -210,7 +210,7 @@ class Component(LoggerMixin, Process):
         if self.__backoff_time__:
             self.__backoff_time__ <<= 1
             if self.__backoff_time__ > self._backoff_limit:
-                self.__backoff_time__ = 0
+                self.__backoff_time__ = 1
         else:
             self.__backoff_time__ = 1
 

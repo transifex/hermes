@@ -174,12 +174,15 @@ class Client(LoggerMixin, Process, FileSystemEventHandler):
         while self._should_run:
             self._exception_raised = self._child_interrupted = False
             try:
+                exit_pipe = self._exit_queue._reader
+
                 ready_pipes, _, _ = select.select(
-                    (self._exit_queue._reader, ), (), ()
+                    (exit_pipe, ), (), ()
                 )
 
-                if self._exit_queue in ready_pipes:
+                if exit_pipe in ready_pipes:
                     self.terminate()
+
             except select.error:
                 if not self._child_interrupted and not self._exception_raised:
                     self._should_run = False
@@ -224,7 +227,7 @@ class Client(LoggerMixin, Process, FileSystemEventHandler):
         """
         Stops the observer if it is 'alive'
         """
-        if self._watch_path:
+        if self._watch_path and self.directory_observer:
             if self.directory_observer.is_alive():
                 self.directory_observer.stop()
 
@@ -270,7 +273,7 @@ class Client(LoggerMixin, Process, FileSystemEventHandler):
                     exc_info=True
                 )
 
-                if backoff:
+                if backoff:  # pragma: no cover
                     backoff <<= 1
                     if backoff > 32:
                         backoff = 1
