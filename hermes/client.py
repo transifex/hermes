@@ -273,7 +273,7 @@ class Client(LoggerMixin, Process, FileSystemEventHandler):
                     exc_info=True
                 )
 
-                if backoff:  # pragma: noqa
+                if backoff:  # pragma: no cover
                     backoff <<= 1
                     if backoff > 32:
                         backoff = 1

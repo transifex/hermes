@@ -1,1 +1,1 @@
-# pragma: noqa
+# pragma: no cover
