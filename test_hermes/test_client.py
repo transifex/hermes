@@ -264,6 +264,18 @@ class ClientStartupTestCase(TestCase):
 
 
 class ClientStopTestCase(TestCase):
+    def test_shutdown(self):
+        client = Client(MagicMock())
+        client.log = MagicMock()
+        client._stop_components = MagicMock()
+        client._stop_observer = MagicMock()
+        client._should_run = True
+
+        client._shutdown()
+        client._stop_components.assert_called_once_with()
+        client._stop_observer.assert_called_once_with()
+        self.assertFalse(client._should_run)
+
     def test_stop_terminates(self):
         client = Client(MagicMock())
 
