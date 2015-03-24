@@ -3,7 +3,7 @@ from Queue import Empty
 from multiprocessing.process import Process
 from multiprocessing.queues import Queue
 import select
-from signal import signal, SIGCHLD, SIGINT
+from signal import signal, SIGCHLD, SIGINT, SIGTERM
 from time import sleep
 import os
 
@@ -153,6 +153,7 @@ class Client(LoggerMixin, Process, FileSystemEventHandler):
         :raises: :class:`~hermes.exceptions.InvalidConfigurationException`
         """
         signal(SIGINT, self._handle_terminate)
+        signal(SIGTERM, self._handle_terminate)
         self._validate_components()
         super(Client, self).start()
 
