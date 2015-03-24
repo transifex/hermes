@@ -22,7 +22,7 @@ with open(join(dirname(__file__), 'README')) as _file:
 
 setup(
     name="hermes",
-    version='0.0.3',
+    version='0.3.1',
     description="Event-driven Postgres client library",
     long_description=long_desc,
     author="Liam Costello",
