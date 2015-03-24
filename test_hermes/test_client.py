@@ -218,9 +218,7 @@ class ClientStartupTestCase(TestCase):
 
                 client.start()
 
-                mock_signal.assert_called_once_with(
-                    SIGINT, client._handle_terminate
-                )
+                self.assertEqual(mock_signal.call_count, 2)
                 client._validate_components.assert_called_once_with()
                 mock_process_start.assert_called_once_with()
 
