@@ -5,3 +5,5 @@ omit =
     */site-packages/*
     *.egg/*
     test_hermes/*
+
+service_pull_request = $CI_PULL_REQUEST
