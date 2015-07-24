@@ -5,7 +5,7 @@ Its main purpose is to enable the easy implementation of resilient Python
 processes which require communication with Postgres. It defines a base-layer
 which you can build as little or as much as you like on top of.
 
-It's been used at Transifex to fulfil a number of roles, one of them
+It's been used at `Transifex <https://www.transifex.com/>`_ to fulfil a number of roles, one of them
 including a Postgres -> Elasticsearch river.
 
 Documentation
