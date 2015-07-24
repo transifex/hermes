@@ -21,7 +21,7 @@ with open(join(dirname(__file__), 'README')) as _file:
     long_desc = _file.read().strip()
 
 setup(
-    name="hermes",
+    name="hermes-pg",
     version='0.3.1',
     description="Event-driven Postgres client library",
     long_description=long_desc,
