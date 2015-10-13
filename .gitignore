@@ -4,3 +4,4 @@
 *.xml
 docs/_build
 build
+dist
