@@ -266,7 +266,7 @@ class Client(LoggerMixin, Process, FileSystemEventHandler):
                     self.log.warning('Server is a slave, stopping components')
                     self._stop_components()
                 break
-            except OperationalError:
+            except OperationalError as e:
                 self._stop_components()
 
                 self.log.warning(
@@ -277,7 +277,7 @@ class Client(LoggerMixin, Process, FileSystemEventHandler):
                 if backoff:  # pragma: no cover
                     backoff <<= 1
                     if backoff > 32:
-                        backoff = 1
+                        raise e
                 else:
                     backoff = 1
                 sleep(backoff)
